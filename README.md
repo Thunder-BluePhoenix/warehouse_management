@@ -1,6 +1,6 @@
 ### Warehouse Management System
 
-A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations.
+A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations, with 3D and 2D warehouse storage visualization.
 
 ### Installation
 
@@ -38,3 +38,9 @@ This app can use GitHub Actions for CI. The following workflows are configured:
 ### License
 
 gpl-3.0
+
+### Warehouse 3D
+
+3D/2D storage visualization of the ERPNext Warehouse tree (Building → Floor → Slot → Bin).
+Open it from the desk at `/app/warehouse-3d` or standalone at `/warehouse-3d`. Requires ERPNext.
+Derived from Warehouse Theatre 3D (MIT) — see `THIRD_PARTY_NOTICES.md`.

@@ -3,7 +3,7 @@ name = "warehouse_management"
 authors = [
     { name = "Thunder BluePhoenix", email = "bluephoenix00995@gmail.com"}
 ]
-description = "A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations."
+description = "A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations, with 3D and 2D warehouse storage visualization."
 requires-python = ">=3.14"
 readme = "README.md"
 dynamic = ["version"]
@@ -14,6 +14,10 @@ dependencies = [
 [build-system]
 requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=16.0.0,<17.0.0"
+erpnext = ">=16.0.0,<17.0.0"
 
 # These dependencies are only installed when developer mode is enabled
 [tool.bench.dev-dependencies]

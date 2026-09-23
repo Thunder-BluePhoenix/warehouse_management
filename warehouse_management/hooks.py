@@ -1,25 +1,35 @@
 app_name = "warehouse_management"
 app_title = "Warehouse Management System"
 app_publisher = "Thunder BluePhoenix"
-app_description = "A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations."
+app_description = "A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations, with 3D and 2D warehouse storage visualization."
 app_email = "bluephoenix00995@gmail.com"
 app_license = "gpl-3.0"
 
 # Apps
 # ------------------
 
-# required_apps = []
+# Warehouse, Bin, Item and UOM doctypes come from ERPNext
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "warehouse_management",
-# 		"logo": "/assets/warehouse_management/logo.png",
-# 		"title": "Warehouse Management System",
-# 		"route": "/warehouse_management",
-# 		"has_permission": "warehouse_management.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "warehouse_management",
+		"logo": "/assets/warehouse_management/images/warehouse_3d_logo.svg",
+		"title": "Warehouse Management System",
+		"route": "/warehouse-3d",
+		"has_permission": "warehouse_management.api.warehouse_3d.check_app_permission",
+	}
+]
+
+website_route_rules = [
+	{"from_route": "/warehouse-3d/<path:app_path>", "to_route": "warehouse-3d"},
+]
+
+# Custom Fields on Warehouse used by the 3D view (wt_* fields)
+fixtures = [
+	{"dt": "Custom Field", "filters": [["module", "=", "Warehouse Management System"]]},
+]
 
 # Includes in <head>
 # ------------------
@@ -261,4 +271,3 @@ app_license = "gpl-3.0"
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

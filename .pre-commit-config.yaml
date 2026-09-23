@@ -42,7 +42,8 @@ repos:
                 .*node_modules.*|
                 .*boilerplate.*|
                 warehouse_management/templates/includes/.*|
-                warehouse_management/public/js/lib/.*
+                warehouse_management/public/js/lib/.*|
+                warehouse_management/public/js/warehouse_3d.js
             )$
 
 

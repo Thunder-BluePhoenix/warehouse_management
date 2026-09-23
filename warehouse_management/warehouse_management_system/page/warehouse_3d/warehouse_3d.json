@@ -1,0 +1,14 @@
+{
+ "doctype": "Page",
+ "module": "Warehouse Management System",
+ "name": "warehouse-3d",
+ "page_name": "warehouse-3d",
+ "roles": [
+  {"role": "System Manager"},
+  {"role": "Stock Manager"},
+  {"role": "Stock User"}
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Warehouse 3D"
+}

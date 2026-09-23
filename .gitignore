@@ -53,3 +53,8 @@ jspm_packages/
 
 # Aider AI Chat
 .aider*
+*.log
+
+# AI tooling state (ruflo / claude-flow)
+.claude-flow/
+.swarm/
