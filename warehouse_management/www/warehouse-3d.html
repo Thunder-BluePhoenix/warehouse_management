@@ -21,15 +21,14 @@
 </head>
 <body>
   <div id="wt3d-root"></div>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/assets/warehouse_management/warehouse_3d_sw.js', {scope:'/'})
-        .catch(e => console.warn('SW:', e));
-    }
-  </script>
+  <!-- Frappe replaces the marker below with `frappe.csrf_token = "…"`. Capture it, then drop the stub:
+       warehouse_3d.js treats `window.frappe` as "running inside desk". -->
+  <script>window.frappe = {};</script>
+  <!-- csrf_token -->
+  <script>window.WT3D_CSRF = frappe.csrf_token || ''; delete window.frappe;</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="/assets/warehouse_management/js/warehouse_3d.js?v=5"></script>
+  <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+  <script src="/assets/warehouse_management/js/warehouse_3d.js?v=6"></script>
   <script>
     if (window.WarehouseTheatre3D) window.WarehouseTheatre3D.init('wt3d-root');
   </script>

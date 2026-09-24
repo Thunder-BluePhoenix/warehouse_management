@@ -58,3 +58,4 @@ jspm_packages/
 # AI tooling state (ruflo / claude-flow)
 .claude-flow/
 .swarm/
+ruvector.db

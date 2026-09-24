@@ -27,7 +27,7 @@ frappe.pages['warehouse-3d'].on_page_load = function (wrapper) {
 	}
 
 	loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', function () {
-		loadScript('https://unpkg.com/vue@3/dist/vue.global.prod.js', function () {
+		loadScript('https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js', function () {
 			loadScript('/assets/warehouse_management/js/warehouse_3d.js?v=' + Date.now(), function () {
 				if (window.WarehouseTheatre3D) window.WarehouseTheatre3D.init('wt3d-root');
 			});

@@ -32,8 +32,7 @@ function lvKey(sl,lv)  { return sl.wh+'__'+lv.wh; }
 const API_PREFIX = 'warehouse_management.api.warehouse_3d.';
 const SETUP_API_PREFIX = 'warehouse_management.api.warehouse_3d_setup.';
 
-function call(method, args={}) {
-  const fullMethod = API_PREFIX + method;
+function apiCall(fullMethod, args={}) {
   if (window.frappe && frappe.call) {
     return new Promise((res,rej) => frappe.call({
       method: fullMethod, args,
@@ -41,35 +40,23 @@ function call(method, args={}) {
       error: rej,
     }));
   }
-  // www / PWA context
-  const params = new URLSearchParams();
+  // www / PWA context: always POST with the session CSRF token (write endpoints are POST-only;
+  // www/warehouse-3d.html captures the token Frappe injects at its <!-- csrf_token --> marker into WT3D_CSRF).
+  const body = {};
   for (const [k,v] of Object.entries(args||{})) {
-    if (v !== null && v !== undefined && v !== '') params.set(k, String(v));
+    if (v !== null && v !== undefined && v !== '') body[k] = v;
   }
-  const url = '/api/method/' + fullMethod + (params.toString() ? '?'+params.toString() : '');
-  return fetch(url, { method:'GET', credentials:'same-origin', cache:'no-store', headers:{'Accept':'application/json','Cache-Control':'no-cache'} })
+  return fetch('/api/method/' + fullMethod, {
+    method:'POST', credentials:'same-origin', cache:'no-store',
+    headers:{'Accept':'application/json','Content-Type':'application/json','X-Frappe-CSRF-Token':window.WT3D_CSRF || ''},
+    body: JSON.stringify(body),
+  })
     .then(r => r.json())
-    .then(r => { if (r.message !== undefined) return r.message; throw new Error(r.exc||'API error'); });
+    .then(r => { if (r.message !== undefined) return r.message; throw new Error(r.exc||r._server_messages||'API error'); });
 }
 
-function callSetup(method, args={}) {
-  const fullMethod = SETUP_API_PREFIX + method;
-  if (window.frappe && frappe.call) {
-    return new Promise((res,rej) => frappe.call({
-      method: fullMethod, args,
-      callback: r => r.exc ? rej(new Error(r.exc)) : res(r.message),
-      error: rej,
-    }));
-  }
-  const params = new URLSearchParams();
-  for (const [k,v] of Object.entries(args||{})) {
-    if (v !== null && v !== undefined && v !== '') params.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
-  }
-  const url = '/api/method/' + fullMethod + (params.toString() ? '?'+params.toString() : '');
-  return fetch(url, { method:'GET', credentials:'same-origin', cache:'no-store', headers:{'Accept':'application/json','Cache-Control':'no-cache'} })
-    .then(r => r.json())
-    .then(r => { if (r.message !== undefined) return r.message; throw new Error(r.exc||'API error'); });
-}
+function call(method, args={}) { return apiCall(API_PREFIX + method, args); }
+function callSetup(method, args={}) { return apiCall(SETUP_API_PREFIX + method, args); }
 
 /* ─────────────────────────────────────────────────────────────
    CSS  (same as wt-app.js, injected once)
@@ -2141,7 +2128,7 @@ const WarehouseDeleteConfirm = defineComponent({
     <div id="wt-whdel-ov" :class="store.whDeleteTarget?'open':''" @click.self="actions.cancelDeleteWh()">
       <div id="wt-whdel-box" v-if="store.whDeleteTarget">
         <div class="wt-whdel-title">Delete "{{store.whDeleteTarget.warehouse_name}}"?</div>
-        <div class="wt-whdel-msg">If this warehouse has stock or transaction history it will be disabled instead of permanently deleted. Warehouses with child warehouses can't be deleted until the children are removed or reassigned.</div>
+        <div class="wt-whdel-msg">A warehouse that still holds or expects stock can't be removed. One with only past transactions will be disabled instead of permanently deleted. Warehouses with child warehouses can't be deleted until the children are removed or reassigned.</div>
         <div class="wt-whdel-actions">
           <button class="wt-btn-cancel" @click="actions.cancelDeleteWh()">Cancel</button>
           <button class="wt-btn-delete" :disabled="store.whDeleting" @click="actions.deleteWh()">{{store.whDeleting?'Deleting…':'Delete'}}</button>
