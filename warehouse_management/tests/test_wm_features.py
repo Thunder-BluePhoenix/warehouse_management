@@ -10,7 +10,9 @@ from warehouse_management.api import warehouse_3d as api
 HSN = "870310"  # india_compliance requires an HSN code on items
 
 
-class TestWarehouseFeatures(IntegrationTestCase):
+class WMTestCase(IntegrationTestCase):
+	"""Fixtures shared by the wm feature tests: a company, and warehouses/items/receipts in it."""
+
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
@@ -67,6 +69,8 @@ class TestWarehouseFeatures(IntegrationTestCase):
 			entry.submit()
 		return entry
 
+
+class TestWarehouseFeatures(WMTestCase):
 	# ── zones (dynamic depth) ───────────────────────────────
 
 	def test_zones_nest_to_any_depth_and_slots_report_their_path(self):

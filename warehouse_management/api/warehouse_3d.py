@@ -101,6 +101,20 @@ def kg_per_unit(stock_uom, weight_per_unit=None, weight_uom=None):
 	return None
 
 
+def totes_at(levels):
+	"""{tote warehouse: (level, Storage Bin id)} for the enabled totes sitting on these levels."""
+	if not levels:
+		return {}
+	return {
+		t.warehouse: (t.location, t.name)
+		for t in frappe.get_all(
+			"Storage Bin",
+			filters={"location": ["in", list(levels)], "disabled": 0, "warehouse": ["is", "set"]},
+			fields=["name", "warehouse", "location"],
+		)
+	}
+
+
 def _floor_bounds(floor):
 	bounds = frappe.db.get_value("Warehouse", floor, ["lft", "rgt"], as_dict=True)
 	if not bounds:
@@ -192,7 +206,8 @@ def get_slots(group_warehouse):
 
 def _levels_by_slot(slot_names, allowed):
 	"""{slot: [level, ...]} for every level under the given slots, each with per-UOM fill, weight,
-	bay type and its top 20 items. Five queries in total, whatever the floor size."""
+	bay type, its totes and its top 20 items (tote contents count at the tote's level).
+	Six queries in total, whatever the floor size."""
 	if not slot_names:
 		return {}
 	levels = frappe.db.sql(
@@ -212,9 +227,11 @@ def _levels_by_slot(slot_names, allowed):
 	levels = [lv for lv in levels if lv.wh in allowed]
 	if not levels:
 		return {}
-	names = {"levels": tuple(lv.wh for lv in levels)}
+	totes = totes_at([lv.wh for lv in levels])
+	level_of = {lv.wh: lv.wh for lv in levels} | {t: loc for t, (loc, _id) in totes.items()}
+	names = {"levels": tuple(level_of)}
 
-	stock, caps, items, kg, item_count = {}, {}, {}, {}, {}
+	stock, caps, items, kg, item_count, count_by_wh = {}, {}, {}, {}, {}, {}
 	for r in frappe.db.sql(
 		"""
 		SELECT b.warehouse, i.stock_uom AS uom, SUM(b.actual_qty) AS qty, SUM(b.reserved_qty) AS reserved
@@ -226,7 +243,9 @@ def _levels_by_slot(slot_names, allowed):
 		names,
 		as_dict=True,
 	):
-		stock.setdefault(r.warehouse, []).append(r)
+		per_uom = stock.setdefault(level_of[r.warehouse], {}).setdefault(r.uom, {"qty": 0.0, "reserved": 0.0})
+		per_uom["qty"] += _flt(r.qty)
+		per_uom["reserved"] += _flt(r.reserved)
 	for r in frappe.db.sql(
 		"""
 		SELECT parent, uom, capacity FROM `tabWarehouse UOM Capacity`
@@ -248,7 +267,7 @@ def _levels_by_slot(slot_names, allowed):
 		names,
 		as_dict=True,
 	):
-		w = kg.setdefault(r.warehouse, {"kg": 0.0, "partial": False})
+		w = kg.setdefault(level_of[r.warehouse], {"kg": 0.0, "partial": False})
 		factor = kg_per_unit(r.stock_uom, r.weight_per_unit, r.weight_uom)
 		if factor is None:
 			w["partial"] = True  # some stock has no known weight
@@ -272,15 +291,22 @@ def _levels_by_slot(slot_names, allowed):
 		as_dict=True,
 	):
 		wh, total = r.pop("warehouse"), r.pop("total")
-		items.setdefault(wh, []).append(r)
-		item_count[wh] = total
+		r["t"] = totes[wh][1] if wh in totes else None  # tote id, when the stock is in a tote
+		items.setdefault(level_of[wh], []).append(r)
+		count_by_wh[wh] = total  # every row of a warehouse carries its total
+	for wh, total in count_by_wh.items():
+		item_count[level_of[wh]] = item_count.get(level_of[wh], 0) + total
+
+	tote_ids = {}
+	for loc, tote_id in totes.values():
+		tote_ids.setdefault(loc, []).append(tote_id)
 
 	by_slot = {}
 	for lv in levels:
 		level_caps = caps.get(lv.wh, {})
 		uoms = [
-			{"u": b.uom, "qty": _flt(b.qty), "reserved": _flt(b.reserved), "cap": level_caps.get(b.uom, 0)}
-			for b in stock.get(lv.wh, [])
+			{"u": uom, "qty": b["qty"], "reserved": b["reserved"], "cap": level_caps.get(uom, 0)}
+			for uom, b in stock.get(lv.wh, {}).items()
 		]
 		stocked = {u["u"] for u in uoms}
 		uoms += [
@@ -294,7 +320,7 @@ def _levels_by_slot(slot_names, allowed):
 				"wh": lv.wh,
 				"label": lv.label,
 				"uoms": uoms,
-				"items": items.get(lv.wh, []),
+				"items": sorted(items.get(lv.wh, []), key=lambda i: -_flt(i["a"]))[:20],
 				"item_count": item_count.get(lv.wh, 0),
 				"bay_type": lv.bay_type,
 				"max_kg": _flt(lv.max_kg),
@@ -302,6 +328,7 @@ def _levels_by_slot(slot_names, allowed):
 				"kg": round(weight["kg"], 3),
 				"kg_partial": weight["partial"],
 				"area": _flt(lv.area),
+				"totes": sorted(tote_ids.get(lv.wh, [])),
 			}
 		)
 	return by_slot
@@ -592,6 +619,77 @@ def delete_warehouse(warehouse):
 	}
 
 
+@frappe.whitelist(methods=["POST"])
+def split_area(warehouse, new_name, length=0, breadth=0, max_weight_kg=0, keep=None, moves=None):
+	"""Carve a new area (Level) out of `warehouse`, e.g. an overflow pile beside a full one.
+
+	The new area gets the same parent, bay type and limit action, its own size and weight limit, and
+	`wt_split_from` = the original. keep: {length, breadth, max_weight_kg} for what remains of the original.
+	moves: [{item_code, qty, batch_no?}] stock to carry over, posted as one Material Transfer."""
+	source = _get_doc_for_write(warehouse)
+	if source.get("wt_warehouse_type") != "Level" or source.is_group:
+		frappe.throw(_("Only a storage Level can be split."))
+	keep = json.loads(keep) if isinstance(keep, str) else (keep or {})
+	moves = json.loads(moves) if isinstance(moves, str) else (moves or [])
+
+	area = frappe.new_doc("Warehouse")
+	area.update(
+		{
+			"warehouse_name": (new_name or "").strip(),
+			"company": source.company,
+			"parent_warehouse": source.parent_warehouse,
+			"is_group": 0,
+			"wt_warehouse_type": "Level",
+			"wt_bay_type": source.get("wt_bay_type"),
+			"wt_weight_limit_action": source.get("wt_weight_limit_action"),
+			"wt_length": _flt(length),
+			"wt_breadth": _flt(breadth),
+			"wt_max_weight_kg": _flt(max_weight_kg),
+			"wt_split_from": source.name,
+		}
+	)
+	area.insert()  # Warehouse create permission
+
+	if keep:
+		for key, field in (
+			("length", "wt_length"),
+			("breadth", "wt_breadth"),
+			("max_weight_kg", "wt_max_weight_kg"),
+		):
+			if key in keep:
+				source.set(field, _flt(keep[key]))
+		source.save()
+
+	moves = [m for m in moves if _flt(m.get("qty")) > 0]
+	entry = None
+	if moves:
+		entry = frappe.get_doc(
+			{
+				"doctype": "Stock Entry",
+				"stock_entry_type": "Material Transfer",
+				"company": source.company,
+				"remarks": _("Split of {0} into {1}").format(source.name, area.name),
+				"items": [
+					{
+						"item_code": m["item_code"],
+						"qty": _flt(m["qty"]),
+						"s_warehouse": source.name,
+						"t_warehouse": area.name,
+						**(
+							{"use_serial_batch_fields": 1, "batch_no": m["batch_no"]}
+							if m.get("batch_no")
+							else {}
+						),
+					}
+					for m in moves
+				],
+			}
+		)
+		entry.insert()
+		entry.submit()
+	return {"name": area.name, "stock_entry": entry.name if entry else None}
+
+
 # ─────────────────────────────────────────────────────────────
 # SEARCH, ITEMS, PUTAWAY RULES, BAY SUGGESTION
 # ─────────────────────────────────────────────────────────────
@@ -694,8 +792,32 @@ def find_locations(query):
 				}
 			)
 
+	if frappe.has_permission("Storage Bin", "read"):
+		for tote in frappe.get_list(
+			"Storage Bin",
+			filters={"name": ["like", like], "location": ["is", "set"]},
+			fields=["name", "warehouse"],
+			limit_page_length=10,
+		):
+			hits.append(
+				{"kind": "Storage Bin", "ref": tote.name, "item": None, "warehouse": tote.warehouse, "qty": 1}
+			)
+
 	allowed = _permitted_warehouses()
 	hits = [h for h in hits if h["warehouse"] in allowed]
+	tote_of = {
+		t.warehouse: t
+		for t in frappe.get_all(
+			"Storage Bin",
+			filters={"warehouse": ["in", list({h["warehouse"] for h in hits}) or [""]]},
+			fields=["name", "warehouse", "location"],
+		)
+	}
+	for h in hits:
+		tote = tote_of.get(h["warehouse"])
+		h["tote"] = tote.name if tote else None
+		if tote and tote.location:
+			h["warehouse"] = tote.location  # the level the tote sits on
 	where = _locate(list({h["warehouse"] for h in hits}))
 	for h in hits:
 		h.update(where.get(h["warehouse"], {}))
@@ -704,22 +826,27 @@ def find_locations(query):
 
 @frappe.whitelist()
 def get_level_items(warehouse):
-	"""Every item in one level (the floor payload carries only the top 20)."""
+	"""Every item in one level, including its totes (the floor payload carries only the top 20)."""
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
-	return frappe.db.sql(
+	totes = totes_at([warehouse])
+	rows = frappe.db.sql(
 		"""
-		SELECT b.item_code AS c, i.item_name AS n, i.stock_uom AS u, i.item_group AS g,
+		SELECT b.warehouse, b.item_code AS c, i.item_name AS n, i.stock_uom AS u, i.item_group AS g,
 		       b.actual_qty AS a, b.reserved_qty AS r, b.valuation_rate AS rate, b.stock_value
 		FROM `tabBin` b
 		INNER JOIN `tabItem` i ON i.name = b.item_code
-		WHERE b.warehouse = %s AND b.actual_qty != 0
+		WHERE b.warehouse IN %(whs)s AND b.actual_qty != 0
 		ORDER BY b.actual_qty DESC
 		LIMIT 2000
 	""",
-		(warehouse,),
+		{"whs": (warehouse, *totes)},
 		as_dict=True,
 	)
+	for r in rows:
+		wh = r.pop("warehouse")
+		r["t"] = totes[wh][1] if wh in totes else None
+	return rows
 
 
 def _levels_under(warehouse):
@@ -847,6 +974,7 @@ def suggest_free_bay(floor, item_code=None, qty=1):
 		return None
 	names = [lv.name for lv in levels]
 	caps = _capacities(names)
+	level_of = {n: n for n in names} | {t: loc for t, (loc, _id) in totes_at(names).items()}
 	stock = {}
 	for b in frappe.db.sql(
 		"""
@@ -855,10 +983,10 @@ def suggest_free_bay(floor, item_code=None, qty=1):
 		WHERE b.warehouse IN %(w)s AND b.actual_qty != 0
 		GROUP BY b.warehouse, i.stock_uom, i.weight_per_unit, i.weight_uom
 	""",
-		{"w": tuple(names)},
+		{"w": tuple(level_of)},
 		as_dict=True,
 	):
-		level = stock.setdefault(b.warehouse, {"by_uom": {}, "kg": 0.0, "any": False})
+		level = stock.setdefault(level_of[b.warehouse], {"by_uom": {}, "kg": 0.0, "any": False})
 		level["any"] = True
 		level["by_uom"][b.stock_uom] = level["by_uom"].get(b.stock_uom, 0) + flt(b.qty)
 		level["kg"] += flt(b.qty) * (kg_per_unit(b.stock_uom, b.weight_per_unit, b.weight_uom) or 0)

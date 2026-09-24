@@ -1623,6 +1623,11 @@ const actions = {
     catch(e){ notify('Failed to load items: '+e.message, 'red'); }
   },
 
+  // Desk only: the dialog is a Frappe form dialog shared with the Warehouse form (public/js/wm_desk.js)
+  splitArea(wh) {
+    frappe.require('/assets/warehouse_management/js/wm_desk.js', ()=>window.wm.split_area(wh, ()=>actions.refreshCurrentFloor()));
+  },
+
   async syncPutaway(slotWh) {
     try {
       const r = await call('sync_putaway_rules',{warehouse:slotWh});
@@ -1954,7 +1959,7 @@ const Tooltip = defineComponent({
 const DetailPanel = defineComponent({
   name: 'DetailPanel',
   setup(){
-    return { store, UCH, fmt, FCH, fmtK, lvFill, lvKey, actions, fillText, zoneLabel, lvHasStock };
+    return { store, UCH, fmt, FCH, fmtK, lvFill, lvKey, actions, fillText, zoneLabel, lvHasStock, inDesk: !!window.frappe };
   },
   computed:{
     d(){ return this.store.dpData; },
@@ -1967,6 +1972,7 @@ const DetailPanel = defineComponent({
       <template v-if="d">
         <div class="wt-dp-title">{{d.slot.label}} — {{d.lv.label}}</div>
         <div class="wt-dp-sub">{{zoneLabel(d.slot)}}{{d.lv.wh}} · {{fillText(d.lv)}}<span v-if="d.lv.bay_type"> · {{d.lv.bay_type}} bay</span><span v-if="d.lv.area"> · area {{fmt(d.lv.area)}}</span></div>
+        <div v-if="d.lv.totes?.length" class="wt-dp-sub">🧺 {{d.lv.totes.length}} tote{{d.lv.totes.length>1?'s':''}}: {{d.lv.totes.join(', ')}}</div>
 
         <span class="wt-dp-sec">UOM fill</span>
         <div v-if="!d.lv.uoms?.length" style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px">No UOMs configured</div>
@@ -1990,10 +1996,10 @@ const DetailPanel = defineComponent({
         <div class="wt-divider"></div>
         <span class="wt-dp-items-lbl">Items in level</span>
         <div v-if="!d.lv.items?.length" style="font-size:10px;color:rgba(255,255,255,.3)">No stock</div>
-        <div v-for="it in (d.lv.items||[])" :key="it.c" class="wt-dp-item">
+        <div v-for="it in (d.lv.items||[])" :key="it.c+'|'+(it.t||'')" class="wt-dp-item">
           <div>
             <div class="wt-dp-icode">{{it.c}}</div>
-            <div class="wt-dp-imeta">{{it.n}} · {{it.u}}</div>
+            <div class="wt-dp-imeta">{{it.n}} · {{it.u}}<span v-if="it.t"> · 🧺 {{it.t}}</span></div>
           </div>
           <div class="wt-dp-iqty">{{fmt(it.a)}}</div>
         </div>
@@ -2022,6 +2028,8 @@ const DetailPanel = defineComponent({
         <button v-if="store.canEdit" class="wt-cfg-btn" @click="actions.openCfg(d.slot.wh)">⚙ Configure stack levels</button>
         <button v-if="store.canEdit" class="wt-cfg-btn" style="background:#475569" @click="actions.syncPutaway(d.slot.wh)"
           title="Create or update ERPNext Putaway Rules from this slot's capacities">⇄ Sync putaway rules</button>
+        <button v-if="store.canEdit && inDesk" class="wt-cfg-btn" style="background:#475569" @click="actions.splitArea(d.lv.wh)"
+          title="Carve a new area out of this level and move some stock into it">✂ Split this area</button>
       </template>
     </div>
   `,
@@ -2084,20 +2092,21 @@ const ItemModal = defineComponent({
             <table id="wt-im-tbl">
               <thead><tr>
                 <th style="color:#718096;width:28px">#</th>
-                <th>Item Code</th><th>Item Name</th><th>Group</th><th>UOM</th>
+                <th>Item Code</th><th>Item Name</th><th>Group</th><th>UOM</th><th>Tote</th>
                 <th>Actual</th><th>Reserved</th><th>Available</th>
                 <th>Rate ₹</th><th>Value ₹</th>
               </tr></thead>
               <tbody>
                 <tr v-if="!items.length">
-                  <td colspan="10" class="wt-im-empty">No items with stock in this level</td>
+                  <td colspan="11" class="wt-im-empty">No items with stock in this level</td>
                 </tr>
-                <tr v-for="(it,i) in items" :key="it.c">
+                <tr v-for="(it,i) in items" :key="it.c+'|'+(it.t||'')">
                   <td class="wt-im-idx">{{i+1}}</td>
                   <td><a class="wt-im-icode" :href="'/app/item/'+encodeURIComponent(it.c)" target="_blank">{{it.c}}</a></td>
                   <td class="wt-im-iname" :title="it.n||''">{{it.n||''}}</td>
                   <td class="wt-im-grp" :title="it.g||''">{{it.g||'—'}}</td>
                   <td><span class="wt-im-uom">{{it.u||''}}</span></td>
+                  <td class="wt-im-grp">{{it.t||'—'}}</td>
                   <td class="wt-im-qty">{{fmt(it.a)}}</td>
                   <td :class="(it.r>0)?'wt-im-res':'wt-im-dim'">{{it.r>0?fmt(it.r):'—'}}</td>
                   <td :class="((parseFloat(it.a)||0)-(parseFloat(it.r)||0)>0)?'wt-im-avl':'wt-im-dim'">{{fmt((parseFloat(it.a)||0)-(parseFloat(it.r)||0))}}</td>
