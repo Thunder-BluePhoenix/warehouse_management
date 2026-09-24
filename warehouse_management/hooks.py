@@ -1,7 +1,7 @@
 app_name = "warehouse_management"
 app_title = "Warehouse Management System"
 app_publisher = "Thunder BluePhoenix"
-app_description = "A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations, with 3D and 2D warehouse storage visualization."
+app_description = "3D/2D warehouse visualisation and yard/warehouse operations on top of ERPNext stock: layouts, capacities, bay types, gate entries and live stock views."
 app_email = "bluephoenix00995@gmail.com"
 app_license = "gpl-3.0"
 

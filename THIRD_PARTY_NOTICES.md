@@ -23,3 +23,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+---
+
+## Bundled libraries (public/js/lib/)
+
+- **three.js r128** (`three.r128.min.js`), Copyright 2010-2021 Three.js Authors, MIT License. https://github.com/mrdoob/three.js
+- **Vue 3.5.13** (`vue.3.5.13.global.prod.js`), Copyright (c) 2018-present Yuxi (Evan) You and Vue contributors, MIT License. https://github.com/vuejs/core
+
+Both are unmodified upstream builds (sha256 in the commit that added them), served from /assets so the app works without CDN access.

@@ -1,4 +1,4 @@
-/* Warehouse 3D — Frappe Page v0.1.0 */
+/* Warehouse 3D — Frappe Page */
 frappe.pages['warehouse-3d'].on_page_load = function (wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
@@ -6,14 +6,19 @@ frappe.pages['warehouse-3d'].on_page_load = function (wrapper) {
 		single_column: true,
 	});
 
-	$('<style id="wt3d-layout">').text(`
-		.layout-main-section-wrapper,.layout-main-section,.page-content {
-			padding:0!important;margin:0!important;max-width:none!important;
-		}
-		.layout-side-section{display:none!important;}
-		.layout-main-section{padding:0!important;box-shadow:none!important;}
-		.page-body .container{max-width:none!important;padding:0!important;}
-	`).appendTo('head');
+	// Full-bleed layout for this page only: Frappe sets body[data-route] on every route change,
+	// so these rules stop applying (and desk sidebars come back) as soon as the user leaves.
+	if (!document.getElementById('wt3d-layout')) {
+		const scope = 'body[data-route="warehouse-3d"]';
+		$('<style id="wt3d-layout">').text(`
+			${scope} .layout-main-section-wrapper,${scope} .layout-main-section,${scope} .page-content {
+				padding:0!important;margin:0!important;max-width:none!important;
+			}
+			${scope} .layout-side-section{display:none!important;}
+			${scope} .layout-main-section{padding:0!important;box-shadow:none!important;}
+			${scope} .page-body .container{max-width:none!important;padding:0!important;}
+		`).appendTo('head');
+	}
 
 	const mount = document.createElement('div');
 	mount.id = 'wt3d-root';
@@ -26,9 +31,11 @@ frappe.pages['warehouse-3d'].on_page_load = function (wrapper) {
 		document.head.appendChild(s);
 	}
 
-	loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', function () {
-		loadScript('https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js', function () {
-			loadScript('/assets/warehouse_management/js/warehouse_3d.js?v=' + Date.now(), function () {
+	// Libraries ship with the app (no CDN), so the page works on restricted networks.
+	const assets = '/assets/warehouse_management/js/';
+	loadScript(assets + 'lib/three.r128.min.js', function () {
+		loadScript(assets + 'lib/vue.3.5.13.global.prod.js', function () {
+			loadScript(assets + 'warehouse_3d.js?v=' + Date.now(), function () {
 				if (window.WarehouseTheatre3D) window.WarehouseTheatre3D.init('wt3d-root');
 			});
 		});
