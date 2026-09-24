@@ -496,7 +496,8 @@ const CSS = `
 .wt-wm-badge.Floor{background:rgba(96,165,250,.18);color:#60a5fa}
 .wt-wm-badge.Slot{background:rgba(74,222,128,.18);color:#4ade80}
 .wt-wm-badge.Zone{background:rgba(45,212,191,.18);color:#2dd4bf}
-.wt-wm-badge.Bin{background:rgba(251,191,36,.18);color:#fbbf24}
+.wt-wm-badge.Level{background:rgba(251,191,36,.18);color:#fbbf24}
+.wt-wm-badge.Tote{background:rgba(244,114,182,.18);color:#f472b6}
 .wt-wm-badge.disabled{background:rgba(248,113,113,.18);color:#f87171}
 .wt-wm-icon-btn{width:24px;height:24px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
 .wt-wm-icon-btn:hover{background:rgba(255,255,255,.14);color:#fff}
@@ -605,7 +606,7 @@ const store = reactive({
   whFormLoading: false,
   whFormSaving: false,
   whFormError: '',
-  whFormLockType: false,  // true when opened via "+ Add level" - context is fixed to Bin under a known Slot
+  whFormLockType: false,  // true when opened via "+ Add level" - context is fixed to Level under a known Slot
   whForm: {
     name: null, warehouse_name: '', company: '', wt_warehouse_type: 'Slot',
     parent_warehouse: '', is_group: true, wt_row: 0, wt_col: 0, wt_row_gap: 0,
@@ -1031,11 +1032,11 @@ const actions = {
     try {
       const result = await callSetup('scan_warehouse_tree');
       store.setupScan = result;
-      // Seed default mapping by best-guess: last depth = Bin, first = Building, etc.
+      // Seed default mapping by best-guess: last depth = Level, first = Building, etc.
       const mapping = {};
       if (result && result.depths && result.depths.length) {
         const depths = result.depths.map(d=>d.depth).sort((a,b)=>a-b);
-        const roleSeq = ['Building','Floor','Slot','Bin'];
+        const roleSeq = ['Building','Floor','Slot','Level'];
         const offset = Math.max(0, roleSeq.length - depths.length);
         depths.forEach((d, i) => {
           mapping[d] = roleSeq[Math.min(i + offset, roleSeq.length-1)];
@@ -1317,10 +1318,10 @@ const actions = {
 
   closeCfg() { store.cfgOpen=false; },
 
-  // Bins (stack levels) are now created/edited/deleted through the same
+  // Levels (stack levels) are now created/edited/deleted through the same
   // create_warehouse/update_warehouse/delete_warehouse endpoints used by
   // Manage Warehouses, so "Configure slot" is just a slot-scoped view over
-  // the same Bin CRUD instead of its own separate save/delete pathway.
+  // the same Level CRUD instead of its own separate save/delete pathway.
   addBinToSlot() {
     if (!store.cfgSlot) return;
     actions.openWhForm('create', null, store.cfgSlot.wh);
@@ -1334,7 +1335,7 @@ const actions = {
     actions.confirmDeleteWh({ name: lv.wh, warehouse_name: lv.label });
   },
 
-  // Keeps the Configure Slot modal's snapshot in sync after a Bin create/
+  // Keeps the Configure Slot modal's snapshot in sync after a Level create/
   // edit/delete happens in a modal stacked on top of it.
   refreshCfgFromSlots() {
     if (!store.cfgOpen || !store.cfgSlot) return;
@@ -1428,21 +1429,21 @@ const actions = {
         store.whFormLoading = false;
       }
     } else if (presetParent) {
-      // "+ Add level" from Configure Slot - creating a Bin directly under a known Slot.
+      // "+ Add level" from Configure Slot - creating a Level directly under a known Slot.
       store.whFormLoading = true;
       try {
         const parentDetail = await call('get_warehouse_detail', {warehouse: presetParent});
         store.whForm = {
           name: null, warehouse_name: '',
           company: parentDetail.company || store.whCompanies[0]?.name || '',
-          wt_warehouse_type: 'Bin', parent_warehouse: presetParent, is_group: false,
+          wt_warehouse_type: 'Level', parent_warehouse: presetParent, is_group: false,
           wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [], ...FORM_EXTRAS,
         };
       } catch(e) {
         store.whFormError = 'Failed to load slot: '+e.message;
         store.whForm = {
           name: null, warehouse_name: '', company: store.whCompanies[0]?.name || '',
-          wt_warehouse_type: 'Bin', parent_warehouse: presetParent, is_group: false,
+          wt_warehouse_type: 'Level', parent_warehouse: presetParent, is_group: false,
           wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [], ...FORM_EXTRAS,
         };
       } finally {
@@ -1474,7 +1475,7 @@ const actions = {
   },
 
   onWhTypeChange() {
-    store.whForm.is_group = store.whForm.wt_warehouse_type !== 'Bin';
+    store.whForm.is_group = store.whForm.wt_warehouse_type !== 'Level';
     store.whForm.parent_warehouse = '';
     actions.refreshWhParentOptions();
   },
@@ -1877,7 +1878,7 @@ const TopBar = defineComponent({
         <span id="wt-search-tag-x" @click="clearSearch">✕</span>
       </div>
       <div class="wt-pills">
-        <div class="wt-pill"><div class="wt-pv">{{hud.total}}</div><div class="wt-pl">Bins</div></div>
+        <div class="wt-pill"><div class="wt-pv">{{hud.total}}</div><div class="wt-pl">Levels</div></div>
         <div class="wt-pill occ"><div class="wt-pv">{{hud.occ}}</div><div class="wt-pl">Active</div></div>
         <div class="wt-pill free"><div class="wt-pv">{{hud.free}}</div><div class="wt-pl">Empty</div></div>
         <div class="wt-pill qty" :title="hud.qtyTitle"><div class="wt-pv">{{hud.qty}}</div><div class="wt-pl">Stock</div></div>
@@ -2156,7 +2157,7 @@ const ConfigModal = defineComponent({
               <button class="wt-del-btn" title="Delete bin" @click="actions.deleteBinFromSlot(lv)">✕</button>
             </div>
             <button class="wt-cfg-add-btn" @click="actions.addBinToSlot()">+ Add level</button>
-            <span class="wt-whform-hint" style="display:block;margin-top:4px">Levels are Bin warehouses under this slot — add, edit, or delete them the same way as in Manage Warehouses.</span>
+            <span class="wt-whform-hint" style="display:block;margin-top:4px">Levels are leaf warehouses under this slot — add, edit, or delete them the same way as in Manage Warehouses.</span>
             <div class="wt-cfg-field">
               <label>Slot label</label>
               <input v-model="labelVal"/>
@@ -2270,10 +2271,10 @@ const WarehouseFormModal = defineComponent({
                 <option value="Floor">Floor</option>
                 <option value="Zone">Zone (zone / aisle / rack; nestable)</option>
                 <option value="Slot">Slot</option>
-                <option value="Bin">Bin</option>
+                <option value="Level">Level</option>
               </select>
               <span class="wt-whform-hint" v-if="!store.whFormLockType">Role of this warehouse in the 3D view</span>
-              <span class="wt-whform-hint" v-else>Adding a level (Bin) to this slot</span>
+              <span class="wt-whform-hint" v-else>Adding a level to this slot</span>
             </div>
 
             <div class="wt-whform-field">
@@ -2287,7 +2288,7 @@ const WarehouseFormModal = defineComponent({
               </span>
             </div>
 
-            <label class="wt-whform-check" v-if="store.whForm.wt_warehouse_type!=='Bin'">
+            <label class="wt-whform-check" v-if="store.whForm.wt_warehouse_type!=='Level'">
               <input type="checkbox" v-model="store.whForm.is_group"/>
               Is Group Warehouse
             </label>
@@ -2320,7 +2321,7 @@ const WarehouseFormModal = defineComponent({
               <span class="wt-whform-hint">Parking draws each slot's levels side by side on the ground as bays</span>
             </div>
 
-            <template v-if="store.whForm.wt_warehouse_type==='Bin'">
+            <template v-if="store.whForm.wt_warehouse_type==='Level'">
               <div class="wt-whform-field">
                 <label>Bay Type</label>
                 <select v-model="store.whForm.wt_bay_type">
@@ -2352,7 +2353,7 @@ const WarehouseFormModal = defineComponent({
               <span class="wt-whform-hint" style="display:block;margin:-6px 0 12px">Length × Breadth = area of a floor area (e.g. a scrap pile)</span>
             </template>
 
-            <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Bin'">
+            <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Level'">
               <label>WT UOM Capacities</label>
               <div v-for="(row,i) in store.whForm.uom_capacities" :key="i" class="wt-whform-uom-row">
                 <select v-model="row.uom">
@@ -2719,13 +2720,13 @@ const AislePicker = defineComponent({
    COMPONENT: SetupWizard
    Scans the customer's existing Warehouse parent_warehouse tree
    by depth (no relabeling) and lets a System Manager assign a
-   Building/Floor/Slot/Bin role per depth level.
+   Building/Floor/Zone/Slot/Level role per depth level.
 ───────────────────────────────────────────────────────────── */
 const SetupWizard = defineComponent({
   name: 'SetupWizard',
   setup(){
     onMounted(()=>{ if (!store.setupScan) actions.runScan(); });
-    const roleIcon = { Building:'🏢', Floor:'🗂️', Zone:'🧭', Slot:'📦', Bin:'🧱' };
+    const roleIcon = { Building:'🏢', Floor:'🗂️', Zone:'🧭', Slot:'📦', Level:'🧱', Tote:'🧺' };
     return { store, actions, roleIcon };
   },
   template: `
@@ -2786,7 +2787,7 @@ const SetupWizard = defineComponent({
               <option value="Floor">Floor</option>
               <option value="Zone">Zone (can repeat)</option>
               <option value="Slot">Slot</option>
-              <option value="Bin">Bin</option>
+              <option value="Level">Level</option>
               <option value="Skip">Skip level</option>
             </select>
           </div>
@@ -2817,8 +2818,8 @@ const SetupWizard = defineComponent({
               <div class="wt-setup-stat-lbl">Slots</div>
             </div>
             <div class="wt-setup-stat">
-              <div class="wt-setup-stat-val">{{store.setupSummary?.Bin || 0}}</div>
-              <div class="wt-setup-stat-lbl">Bins</div>
+              <div class="wt-setup-stat-val">{{store.setupSummary?.Level || 0}}</div>
+              <div class="wt-setup-stat-lbl">Levels</div>
             </div>
           </div>
 

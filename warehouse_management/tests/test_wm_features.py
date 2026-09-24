@@ -38,7 +38,9 @@ class TestWarehouseFeatures(IntegrationTestCase):
 		building = self.wh(f"{prefix} B", "Building")
 		floor = self.wh(f"{prefix} F", "Floor", building.name)
 		slot = self.wh(f"{prefix} S", "Slot", floor.name)
-		lvls = [self.wh(f"{prefix} L{i}", "Bin", slot.name, is_group=0, **level_extra) for i in range(levels)]
+		lvls = [
+			self.wh(f"{prefix} L{i}", "Level", slot.name, is_group=0, **level_extra) for i in range(levels)
+		]
 		return floor, slot, lvls
 
 	def item(self, code, **kw):
@@ -74,7 +76,7 @@ class TestWarehouseFeatures(IntegrationTestCase):
 		rack = self.wh("_WF Rack 01", "Zone", zone.name)
 		deep = self.wh("_WF Z Deep", "Slot", rack.name)
 		self.wh("_WF Z Direct", "Slot", floor.name)
-		self.wh("_WF Z L", "Bin", deep.name, is_group=0)
+		self.wh("_WF Z L", "Level", deep.name, is_group=0)
 
 		slots = {s["label"]: s for s in api.get_slots(floor.name)}
 		self.assertEqual(slots["_WF Z Deep"]["zone_path"], ["_WF Zone A", "_WF Rack 01"])
@@ -84,6 +86,14 @@ class TestWarehouseFeatures(IntegrationTestCase):
 		self.assertEqual(group.slot_count, 2)
 		parents = {p.name for p in api.get_parent_warehouse_options("Slot", self.company)}
 		self.assertTrue({floor.name, zone.name, rack.name} <= parents)
+
+	def test_patch_renames_old_bin_role_to_level(self):
+		from warehouse_management.patches.v1_0 import rename_bin_role_to_level
+
+		_floor, _slot, (level, _other) = self.floor_with_levels("_WF Old")
+		frappe.db.set_value("Warehouse", level.name, "wt_warehouse_type", "Bin")  # pre-rename data
+		rename_bin_role_to_level.execute()
+		self.assertEqual(frappe.db.get_value("Warehouse", level.name, "wt_warehouse_type"), "Level")
 
 	# ── search ──────────────────────────────────────────────
 
@@ -173,7 +183,7 @@ class TestWarehouseFeatures(IntegrationTestCase):
 		frappe.get_doc(doctype="Bay Type", bay_type_name="_WF Car").insert()
 		frappe.get_doc(doctype="Bay Type", bay_type_name="_WF Truck").insert()
 		floor, slot, (full, free) = self.floor_with_levels("_WF Bay", wt_bay_type="_WF Car")
-		truck_bay = self.wh("_WF Bay L9", "Bin", slot.name, is_group=0, wt_bay_type="_WF Truck")
+		truck_bay = self.wh("_WF Bay L9", "Level", slot.name, is_group=0, wt_bay_type="_WF Truck")
 		for lv in (full, free, truck_bay):
 			api.save_uom_capacity(lv.name, "Nos", 1)
 		car = self.item("_WF Car Unit", wt_bay_type="_WF Car")

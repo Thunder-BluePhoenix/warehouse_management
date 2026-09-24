@@ -76,7 +76,7 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		item = frappe.db.get_value("Item", {"is_stock_item": 1, "has_serial_no": 0, "has_batch_no": 0})
 		if not item:
 			self.skipTest("needs a stock Item on the test site")
-		wh = self._make("_WT Test Level", "Bin", is_group=0)
+		wh = self._make("_WT Test Level", "Level", is_group=0)
 		frappe.get_doc(doctype="Bin", item_code=item, warehouse=wh.name, actual_qty=5).insert()
 
 		with self.assertRaises(frappe.ValidationError):
@@ -89,7 +89,7 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		floor = self._make("_WT Q Floor", "Floor", parent=building.name)
 		slots = [self._make(f"_WT Q S{i}", "Slot", parent=floor.name) for i in range(5)]
 		levels = [
-			[self._make(f"_WT Q S{i}-L{j}", "Bin", is_group=0, parent=slot.name) for j in range(4)]
+			[self._make(f"_WT Q S{i}-L{j}", "Level", is_group=0, parent=slot.name) for j in range(4)]
 			for i, slot in enumerate(slots)
 		]
 		stocked, cap_only = levels[0][0], levels[0][1]
@@ -143,13 +143,13 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		scan = setup_api.scan_warehouse_tree(self.company)
 		self.assertTrue({2, 3, 4, 5} <= {d["depth"] for d in scan["depths"]})
 
-		roles = {2: "Building", 3: "Floor", 4: "Slot", 5: "Bin"}
+		roles = {2: "Building", 3: "Floor", 4: "Slot", 5: "Level"}
 		setup_api.apply_depth_mapping([{"depth": d, "role": r} for d, r in roles.items()], self.company)
 		self.assertEqual(
 			[
 				frappe.db.get_value("Warehouse", w.name, "wt_warehouse_type")
 				for w in (building, floor, slot, level)
 			],
-			["Building", "Floor", "Slot", "Bin"],
+			["Building", "Floor", "Slot", "Level"],
 		)
-		self.assertGreaterEqual(setup_api.get_setup_summary().get("Bin", 0), 1)
+		self.assertGreaterEqual(setup_api.get_setup_summary().get("Level", 0), 1)

@@ -6,6 +6,7 @@ from frappe import _
 
 from warehouse_management.api.warehouse_3d import (
 	ROLES,
+	TOTE,
 	_get_doc_for_write,
 	_require_edit_permission,
 	_require_view_permission,
@@ -43,7 +44,7 @@ def scan_warehouse_tree(company=None):
 	"""
 	Walk the existing Warehouse parent_warehouse tree (no relabeling) and
 	return a summary grouped by depth, so the setup wizard can ask the
-	admin to assign a role (Building/Floor/Slot/Bin/Skip) per depth.
+	admin to assign a role (Building/Floor/Zone/Slot/Level/Skip) per depth.
 	"""
 	_require_edit_permission()
 
@@ -89,7 +90,8 @@ def scan_warehouse_tree(company=None):
 def apply_depth_mapping(mapping, company=None):
 	"""
 	mapping: JSON list like [{"depth": 1, "role": "Building"}, {"depth": 2, "role": "Floor"}, ...]
-	role is one of: Building, Floor, Zone (may repeat at several depths), Slot, Bin, Skip
+	role is one of: Building, Floor, Zone (may repeat at several depths), Slot, Level, Skip.
+	Tote warehouses (owned by Storage Bins) are never relabelled
 	Writes wt_warehouse_type to every warehouse at each mapped depth (via Document.save, so
 	permissions and Version history apply). Does not rename, move, or otherwise alter the tree.
 	"""
@@ -103,12 +105,12 @@ def apply_depth_mapping(mapping, company=None):
 	if not depth_to_role:
 		frappe.throw(_("No valid role mapping provided."))
 
-	warehouses = _list_warehouses(company, ["name", "parent_warehouse", "disabled"])
+	warehouses = _list_warehouses(company, ["name", "parent_warehouse", "disabled", "wt_warehouse_type"])
 	_depth = _depth_fn({w.name: w for w in warehouses})
 
 	updated = 0
 	for w in warehouses:
-		if w.disabled:
+		if w.disabled or w.wt_warehouse_type == TOTE:
 			continue
 		role = depth_to_role.get(_depth(w.name))
 		if role:

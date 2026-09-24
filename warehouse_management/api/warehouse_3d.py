@@ -66,7 +66,8 @@ def _int(v):
 		return 0
 
 
-ROLES = ("Building", "Floor", "Zone", "Slot", "Bin")
+ROLES = ("Building", "Floor", "Zone", "Slot", "Level")  # roles a user can assign
+TOTE = "Tote"  # system role of a Storage Bin's own warehouse; set by Storage Bin, never by hand
 # Optional per-warehouse settings the Manage Warehouses form can edit (all Custom Fields, see fixtures)
 EXTRA_FIELDS = (
 	"wt_render_mode",
@@ -144,7 +145,7 @@ def get_warehouse_groups(company=None):
 
 @frappe.whitelist()
 def get_slots(group_warehouse):
-	"""Return all Slot warehouses under a Floor, with their Bin levels."""
+	"""Return all Slot warehouses under a Floor, with their levels."""
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", group_warehouse, throw=True)
 	allowed = _permitted_warehouses()
@@ -190,7 +191,7 @@ def get_slots(group_warehouse):
 
 
 def _levels_by_slot(slot_names, allowed):
-	"""{slot: [level, ...]} for every Bin-role level under the given slots, each with per-UOM fill, weight,
+	"""{slot: [level, ...]} for every level under the given slots, each with per-UOM fill, weight,
 	bay type and its top 20 items. Five queries in total, whatever the floor size."""
 	if not slot_names:
 		return {}
@@ -201,7 +202,7 @@ def _levels_by_slot(slot_names, allowed):
 		       COALESCE(w.wt_weight_limit_action, 'Warn') AS limit_action
 		FROM `tabWarehouse` w
 		WHERE w.parent_warehouse IN %(slots)s
-		  AND w.wt_warehouse_type = 'Bin'
+		  AND w.wt_warehouse_type = 'Level'
 		  AND w.disabled = 0
 		ORDER BY w.warehouse_name ASC
 	""",
@@ -377,8 +378,8 @@ def get_user_access():
 
 
 def _default_is_group(wt_warehouse_type):
-	"""Building/Floor/Slot are containers by convention; Bin is the leaf stock warehouse."""
-	return 0 if wt_warehouse_type == "Bin" else 1
+	"""Building/Floor/Zone/Slot are containers by convention; Level is the leaf stock warehouse."""
+	return 0 if wt_warehouse_type == "Level" else 1
 
 
 def _set_uom_capacities(doc, rows):
@@ -411,7 +412,7 @@ def get_parent_warehouse_options(wt_warehouse_type, company=None):
 		"Floor": ["Building"],
 		"Zone": ["Floor", "Zone"],
 		"Slot": ["Floor", "Zone"],
-		"Bin": ["Slot"],
+		"Level": ["Slot"],
 	}.get(wt_warehouse_type)
 	if parent_roles:
 		filters = {"wt_warehouse_type": ["in", parent_roles], "disabled": 0}
@@ -722,7 +723,7 @@ def get_level_items(warehouse):
 
 
 def _levels_under(warehouse):
-	"""Bin-role levels at or under `warehouse`, in floor order (slot row, col, level name)."""
+	"""Levels at or under `warehouse`, in floor order (slot row, col, level name)."""
 	bounds = _floor_bounds(warehouse)
 	return frappe.db.sql(
 		"""
@@ -731,7 +732,7 @@ def _levels_under(warehouse):
 		FROM `tabWarehouse` lv
 		LEFT JOIN `tabWarehouse` sl ON sl.name = lv.parent_warehouse
 		WHERE lv.lft >= %(lft)s AND lv.rgt <= %(rgt)s
-		  AND lv.wt_warehouse_type = 'Bin' AND lv.disabled = 0 AND lv.is_group = 0
+		  AND lv.wt_warehouse_type = 'Level' AND lv.disabled = 0 AND lv.is_group = 0
 		ORDER BY sl.wt_row, sl.wt_col, sl.warehouse_name, lv.warehouse_name
 	""",
 		bounds,

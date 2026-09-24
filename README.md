@@ -2,7 +2,7 @@
 
 A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on its own and needs only ERPNext; it adds no stock ledger of its own.
 
-**Layout.** Tag warehouses with a role: **Building → Floor → Zone → Slot → Bin**. Zones nest to any depth (zone › aisle › rack), so the tree grows with the business. A Bin is one storage level or bay. Each Floor draws as **Rack** (levels stacked on a pillar) or **Parking** (bays side by side on the ground).
+**Layout.** Tag warehouses with a role: **Building → Floor → Zone → Slot → Level**. Zones nest to any depth (zone › aisle › rack), so the tree grows with the business. A Level is one storage level or bay. Each Floor draws as **Rack** (levels stacked on a pillar) or **Parking** (bays side by side on the ground).
 
 **3D/2D view** (`/app/warehouse-3d` in desk, `/warehouse-3d` standalone):
 - Fill per level is the highest of its UOM capacities and its weight limit. Over 100 % shows as *Over*; stock with no capacity set shows as *No capacity*.
@@ -21,7 +21,7 @@ A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on
 
 **Not in this app:** movable totes, pick, pack and dispatch. Use ERPNext's Pick List, Packing Slip and Delivery Note.
 
-Access follows ERPNext permissions: viewing needs read on **Warehouse** and **Bin**; editing needs write on **Warehouse** (Item Manager by default). Adjust in Role Permission Manager.
+Access follows ERPNext permissions: viewing needs read on **Warehouse** and ERPNext's **Bin** (stock balances); editing needs write on **Warehouse** (Item Manager by default). Adjust in Role Permission Manager.
 
 ### Installation
 
@@ -62,5 +62,5 @@ gpl-3.0
 
 ### Warehouse 3D
 
-3D/2D storage visualization of the ERPNext Warehouse tree (Building → Floor → Slot → Bin).
+3D/2D storage visualization of the ERPNext Warehouse tree (Building → Floor → Zone → Slot → Level).
 Open it from the desk at `/app/warehouse-3d` or standalone at `/warehouse-3d`. Requires ERPNext.
