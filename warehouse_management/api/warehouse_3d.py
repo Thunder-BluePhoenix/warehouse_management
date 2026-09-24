@@ -3,32 +3,34 @@ import json
 import frappe
 from frappe import _
 
-# Roles allowed to VIEW the app (read-only access)
-VIEW_ROLES = {"System Manager", "Stock Manager", "Stock User"}
-# Roles allowed to EDIT (floor plan, configure slot, UOM capacity)
-EDIT_ROLES = {"System Manager"}
-
 # Security model (see docs/research/areas/11-codebase-platform.md §6.3):
+# - access comes from ERPNext's own permissions (Role Permission Manager), not a hard-coded role list:
+#   view = read on Warehouse and Bin (the viewer shows stock); edit = write on Warehouse (what saving needs anyway);
 # - every state-changing endpoint is POST-only, so Frappe enforces CSRF and commits the request itself;
 # - writes go through Document.save()/insert()/delete_doc without ignore_permissions, so DocType
 #   permissions, User Permissions (Company/Warehouse) and Version history (track_changes) all apply;
 # - reads return only warehouses frappe.get_list lets the user see.
 
 
+def can_view():
+	return bool(frappe.has_permission("Warehouse", "read") and frappe.has_permission("Bin", "read"))
+
+
+def can_edit():
+	return bool(frappe.has_permission("Warehouse", "write"))
+
+
 def _require_view_permission():
-	"""Raise PermissionError unless the current user has a view role."""
-	if not (set(frappe.get_roles()) & VIEW_ROLES):
-		frappe.throw(_("You do not have permission to view Warehouse 3D."), frappe.PermissionError)
+	"""Raise PermissionError unless the user may read warehouses and their stock."""
+	if not can_view():
+		frappe.throw(_("You need read access to Warehouse and Bin to view Warehouse 3D."), frappe.PermissionError)
 
 
 def _require_edit_permission():
-	"""Raise PermissionError unless the current user has an edit role."""
-	if not (set(frappe.get_roles()) & EDIT_ROLES):
+	"""Raise PermissionError unless the user may change warehouses."""
+	if not can_edit():
 		frappe.throw(
-			_(
-				"You do not have permission to edit Warehouse 3D. "
-				"Only System Manager can edit floor plans, slot configuration, or UOM capacities."
-			),
+			_("You need write access to Warehouse to edit floor plans, slot configuration or UOM capacities."),
 			frappe.PermissionError,
 		)
 
@@ -121,91 +123,89 @@ def get_slots(group_warehouse):
 	)
 	slots = [sl for sl in slots if sl["wh"] in allowed]
 
+	levels = _levels_by_slot([sl["wh"] for sl in slots], allowed)
 	for sl in slots:
-		sl["levels"] = _get_levels(sl["wh"], allowed)
+		sl["levels"] = levels.get(sl["wh"], [])
 
 	return slots
 
 
-def _get_levels(slot_wh, allowed):
-	"""Bin warehouses under a Slot."""
+def _levels_by_slot(slot_names, allowed):
+	"""{slot: [level, ...]} for every Bin-role level under the given slots, each with per-UOM fill and its
+	top 20 items. Four queries in total, whatever the floor size."""
+	if not slot_names:
+		return {}
 	levels = frappe.db.sql(
 		"""
-		SELECT w.name AS wh, w.warehouse_name AS label
+		SELECT w.name AS wh, w.warehouse_name AS label, w.parent_warehouse AS slot
 		FROM `tabWarehouse` w
-		WHERE w.parent_warehouse = %s
+		WHERE w.parent_warehouse IN %(slots)s
 		  AND w.wt_warehouse_type = 'Bin'
 		  AND w.disabled = 0
 		ORDER BY w.warehouse_name ASC
 	""",
-		(slot_wh,),
+		{"slots": tuple(slot_names)},
 		as_dict=True,
 	)
-	levels = [lv for lv in levels if lv["wh"] in allowed]
+	levels = [lv for lv in levels if lv.wh in allowed]
+	if not levels:
+		return {}
+	names = {"levels": tuple(lv.wh for lv in levels)}
 
+	stock, caps, items = {}, {}, {}
+	for r in frappe.db.sql(
+		"""
+		SELECT b.warehouse, i.stock_uom AS uom, SUM(b.actual_qty) AS qty, SUM(b.reserved_qty) AS reserved
+		FROM `tabBin` b
+		INNER JOIN `tabItem` i ON i.name = b.item_code
+		WHERE b.warehouse IN %(levels)s AND b.actual_qty != 0
+		GROUP BY b.warehouse, i.stock_uom
+	""",
+		names,
+		as_dict=True,
+	):
+		stock.setdefault(r.warehouse, []).append(r)
+	for r in frappe.db.sql(
+		"""
+		SELECT parent, uom, capacity FROM `tabWarehouse UOM Capacity`
+		WHERE parenttype = 'Warehouse' AND parent IN %(levels)s
+		ORDER BY idx
+	""",
+		names,
+		as_dict=True,
+	):
+		caps.setdefault(r.parent, {})[r.uom] = _flt(r.capacity)
+	for r in frappe.db.sql(
+		"""
+		SELECT warehouse, c, n, u, g, a, r, rate, stock_value FROM (
+			SELECT b.warehouse, b.item_code AS c, i.item_name AS n, i.stock_uom AS u, i.item_group AS g,
+			       b.actual_qty AS a, b.reserved_qty AS r, b.valuation_rate AS rate, b.stock_value,
+			       ROW_NUMBER() OVER (PARTITION BY b.warehouse ORDER BY b.actual_qty DESC) AS rn
+			FROM `tabBin` b
+			INNER JOIN `tabItem` i ON i.name = b.item_code
+			WHERE b.warehouse IN %(levels)s AND b.actual_qty != 0
+		) ranked
+		WHERE rn <= 20
+		ORDER BY warehouse, rn
+	""",
+		names,
+		as_dict=True,
+	):
+		items.setdefault(r.pop("warehouse"), []).append(r)
+
+	by_slot = {}
 	for lv in levels:
-		lv["uoms"] = _get_uom_data(lv["wh"])
-		lv["items"] = _get_items(lv["wh"])
-
-	return levels
-
-
-def _get_uom_data(level_wh):
-	bins = frappe.db.sql(
-		"""
-		SELECT i.stock_uom AS uom,
-		       SUM(b.actual_qty)   AS qty,
-		       SUM(b.reserved_qty) AS reserved
-		FROM `tabBin` b
-		INNER JOIN `tabItem` i ON i.name = b.item_code
-		WHERE b.warehouse = %s AND b.actual_qty != 0
-		GROUP BY i.stock_uom
-	""",
-		(level_wh,),
-		as_dict=True,
-	)
-
-	try:
-		caps = {
-			r.uom: _flt(r.capacity)
-			for r in frappe.db.sql(
-				"""
-			SELECT uom, capacity FROM `tabWarehouse UOM Capacity`
-			WHERE parent = %s
-		""",
-				(level_wh,),
-				as_dict=True,
-			)
-		}
-	except Exception:
-		caps = {}
-
-	result = []
-	for b in bins:
-		result.append(
-			{"u": b.uom, "qty": _flt(b.qty), "reserved": _flt(b.reserved), "cap": caps.get(b.uom, 0)}
+		level_caps = caps.get(lv.wh, {})
+		uoms = [
+			{"u": b.uom, "qty": _flt(b.qty), "reserved": _flt(b.reserved), "cap": level_caps.get(b.uom, 0)}
+			for b in stock.get(lv.wh, [])
+		]
+		stocked = {u["u"] for u in uoms}
+		uoms += [{"u": uom, "qty": 0, "reserved": 0, "cap": cap} for uom, cap in level_caps.items() if uom not in stocked]
+		by_slot.setdefault(lv.slot, []).append(
+			{"wh": lv.wh, "label": lv.label, "uoms": uoms, "items": items.get(lv.wh, [])}
 		)
-	for uom, cap in caps.items():
-		if not any(r["u"] == uom for r in result):
-			result.append({"u": uom, "qty": 0, "reserved": 0, "cap": cap})
-	return result
-
-
-def _get_items(level_wh):
-	return frappe.db.sql(
-		"""
-		SELECT b.item_code AS c, i.item_name AS n,
-		       i.stock_uom AS u, i.item_group AS g,
-		       b.actual_qty AS a, b.reserved_qty AS r,
-		       b.valuation_rate AS rate, b.stock_value
-		FROM `tabBin` b
-		INNER JOIN `tabItem` i ON i.name = b.item_code
-		WHERE b.warehouse = %s AND b.actual_qty != 0
-		ORDER BY b.actual_qty DESC LIMIT 20
-	""",
-		(level_wh,),
-		as_dict=True,
-	)
+	return by_slot
 
 
 @frappe.whitelist(methods=["POST"])
@@ -260,16 +260,15 @@ def save_uom_capacity(warehouse, uom, capacity):
 @frappe.whitelist()
 def check_app_permission():
 	"""Used by Frappe to decide whether to show the app icon on /apps screen."""
-	return bool(set(frappe.get_roles()) & VIEW_ROLES)
+	return can_view()
 
 
 @frappe.whitelist()
 def get_user_access():
 	"""Returns the current user's access level for the frontend to adapt UI."""
-	user_roles = set(frappe.get_roles())
 	return {
-		"can_view": bool(user_roles & VIEW_ROLES),
-		"can_edit": bool(user_roles & EDIT_ROLES),
+		"can_view": can_view(),
+		"can_edit": can_edit(),
 		"setup_complete": bool(frappe.db.exists("Warehouse", {"wt_warehouse_type": ["is", "set"]})),
 	}
 

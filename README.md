@@ -1,6 +1,10 @@
 ### Warehouse Management System
 
-A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations, with 3D and 2D warehouse storage visualization.
+3D and 2D visualisation of the ERPNext Warehouse tree and its live stock, plus warehouse layout editing (floor plans, slot positions, UOM capacities) and warehouse CRUD.
+
+What it is **not** (yet): receiving, put-away, picking, packing and dispatch are done with ERPNext's own documents (Purchase Receipt, Stock Entry, Putaway Rule, Pick List, Delivery Note). This app adds no stock ledger of its own; it reads `tabBin`.
+
+Access follows ERPNext permissions: viewing needs read on **Warehouse** and **Bin**; editing needs write on **Warehouse** (Item Manager by default). Adjust in Role Permission Manager.
 
 ### Installation
 
