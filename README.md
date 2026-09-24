@@ -13,13 +13,21 @@ A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on
 **Rules on stock postings** (Stock Entry, Purchase Receipt, Purchase Invoice, Stock Reconciliation):
 - **Bay Type**: an Item with a *Required Bay Type* may only go into levels of that type.
 - **Weight limit** per level in kg (from the item's weight or kg UOM), with *Warn* or *Block*.
+- **WMS Settings** can switch every Block to a warning (alarm mode) and add an early alarm at a chosen % of the limit.
+
+**Totes (Storage Bin).** A movable, barcoded box with its own warehouse, so its contents are ordinary ERPNext stock. To move a tote, scan it and then its new location; no stock entry is needed, and every move is logged (Storage Bin Movement). Tote contents count at the tote's level for the 3D view, search and the rules above.
+
+**WMS Scan** (`/app/wms-scan`, for phones and scanners):
+- **Put away**: scan the item, then a level or tote. It suggests a place from Putaway Rules or where the item already is, and posts one Material Transfer.
+- **Move tote**: scan the tote, then its new location.
+- **Pick**: work through an ERPNext Pick List in walking order. Finishing ships what was picked, drafts the Delivery Note, and tells the customer by comment and email what is not in this shipment.
 
 **Also:**
-- Floor areas with length × breadth, computed area and a *split from* link (e.g. scrap piles).
+- Floor areas with length × breadth and a computed area. **Split Area** (on the Warehouse form or in 3D) carves out a new area beside an existing one and moves stock into it.
 - **Putaway Rule sync** from level capacities.
 - **Gate Entry**: a generic In/Out register that posts a Material Receipt or Issue, with *Suggest Free Bay*.
 
-**Not in this app:** movable totes, pick, pack and dispatch. Use ERPNext's Pick List, Packing Slip and Delivery Note.
+**Not in this app:** packing (use ERPNext's Packing Slip) and label printing.
 
 Access follows ERPNext permissions: viewing needs read on **Warehouse** and ERPNext's **Bin** (stock balances); editing needs write on **Warehouse** (Item Manager by default). Adjust in Role Permission Manager.
 
