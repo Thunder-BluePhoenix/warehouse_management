@@ -60,6 +60,7 @@ This app can use GitHub Actions for CI. The following workflows are configured:
 
 gpl-3.0
 
-### Credits
+### Warehouse 3D
 
-The 3D view is derived from Warehouse Theatre 3D (MIT). three.js r128 and Vue 3.5.13 are bundled locally. See `THIRD_PARTY_NOTICES.md`.
+3D/2D storage visualization of the ERPNext Warehouse tree (Building → Floor → Slot → Bin).
+Open it from the desk at `/app/warehouse-3d` or standalone at `/warehouse-3d`. Requires ERPNext.
