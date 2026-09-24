@@ -28,7 +28,7 @@ def _item_info(item_code):
 
 
 @frappe.whitelist()
-def resolve(code):
+def resolve(code: str):
 	"""What was scanned: a tote, a storage level, a serial no, a batch, or an item (code or barcode)."""
 	_require_view_permission()
 	code = (code or "").strip()
@@ -99,7 +99,7 @@ def resolve(code):
 
 
 @frappe.whitelist(methods=["POST"])
-def move_tote(storage_bin, location):
+def move_tote(storage_bin: str, location: str):
 	"""Scan the tote, then its new location."""
 	movement = frappe.get_doc(
 		{"doctype": "Storage Bin Movement", "storage_bin": storage_bin, "to_location": location}
@@ -112,7 +112,7 @@ def move_tote(storage_bin, location):
 
 
 @frappe.whitelist()
-def suggest_putaway(item_code, qty=1):
+def suggest_putaway(item_code: str, qty: float = 1):
 	"""Where should this go? A Putaway Rule with room, else where the item already is (level or tote)."""
 	_require_view_permission()
 	from erpnext.stock.utils import get_stock_balance
@@ -157,7 +157,7 @@ def _target_warehouse(target, company):
 
 
 @frappe.whitelist(methods=["POST"])
-def putaway(source_warehouse, lines):
+def putaway(source_warehouse: str, lines: str | list):
 	"""Post one Material Transfer from the staging warehouse to each scanned level or tote.
 	lines: [{item_code, qty, target, serial_no?, batch_no?}]"""
 	if isinstance(lines, str):
@@ -208,7 +208,7 @@ def _draft_pick_list(pick_list, ptype="write"):
 
 
 @frappe.whitelist()
-def get_pick(pick_list):
+def get_pick(pick_list: str):
 	"""The pick list's rows in walking order (floor, slot row/column, level), each with where to go."""
 	_require_view_permission()
 	doc = _draft_pick_list(pick_list, "read")
@@ -265,7 +265,7 @@ def get_pick(pick_list):
 
 
 @frappe.whitelist(methods=["POST"])
-def record_pick(pick_list, code, qty=1, warehouse=None):
+def record_pick(pick_list: str, code: str, qty: float = 1, warehouse: str | None = None):
 	"""One scan while picking: an item, serial or batch, optionally at a scanned level/tote (`warehouse`).
 	Adds to the first matching row that still needs it."""
 	doc = _draft_pick_list(pick_list)
@@ -316,7 +316,7 @@ def record_pick(pick_list, code, qty=1, warehouse=None):
 
 
 @frappe.whitelist(methods=["POST"])
-def finish_pick(pick_list):
+def finish_pick(pick_list: str):
 	"""Ship what was picked: trim short rows to the picked quantity, submit the Pick List, tell the
 	customer about anything short (WMS Settings), and draft the Delivery Note for the picked goods.
 
@@ -414,12 +414,14 @@ def _tell_customers(pick, short):
 	notified = []
 	for sales_order, lines in by_order.items():
 		order = frappe.get_doc("Sales Order", sales_order)
-		table = "".join(
-			f"<tr><td>{frappe.utils.escape_html(line['item_name'] or line['item_code'])}</td>"
-			f"<td>{line['ordered']:g} {line['uom']}</td><td>{line['picked']:g}</td>"
-			f"<td>{line['missing']:g}</td></tr>"
-			for line in lines
-		)
+		rows = []
+		for line in lines:
+			name = frappe.utils.escape_html(line["item_name"] or line["item_code"])
+			rows.append(
+				f"<tr><td>{name}</td><td>{line['ordered']:g} {line['uom']}</td>"
+				+ f"<td>{line['picked']:g}</td><td>{line['missing']:g}</td></tr>"
+			)
+		table = "".join(rows)
 		detail = (
 			"<table border='1' cellpadding='4' style='border-collapse:collapse'>"
 			f"<tr><th>{_('Item')}</th><th>{_('Ordered')}</th><th>{_('Shipping now')}</th>"

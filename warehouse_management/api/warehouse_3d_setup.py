@@ -40,7 +40,7 @@ def _depth_fn(by_name):
 
 
 @frappe.whitelist()
-def scan_warehouse_tree(company=None):
+def scan_warehouse_tree(company: str | None = None):
 	"""
 	Walk the existing Warehouse parent_warehouse tree (no relabeling) and
 	return a summary grouped by depth, so the setup wizard can ask the
@@ -87,7 +87,7 @@ def scan_warehouse_tree(company=None):
 
 
 @frappe.whitelist(methods=["POST"])
-def apply_depth_mapping(mapping, company=None):
+def apply_depth_mapping(mapping: str | list, company: str | None = None):
 	"""
 	mapping: JSON list like [{"depth": 1, "role": "Building"}, {"depth": 2, "role": "Floor"}, ...]
 	role is one of: Building, Floor, Zone (may repeat at several depths), Slot, Level, Skip.

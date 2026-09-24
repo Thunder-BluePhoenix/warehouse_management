@@ -184,9 +184,10 @@ def queue_floor_refresh(floor):
 
 
 def _publish_changed_floors():
-	floors = frappe.flags.pop("wt3d_changed_floors", None) or set()
-	if floors:
-		frappe.publish_realtime("wt3d_stock_changed", {"floors": sorted(floors)})
+	# Each floor's own document room: only viewers showing that floor subscribe to it, and Frappe
+	# checks their read permission on the floor when they do.
+	for floor in sorted(frappe.flags.pop("wt3d_changed_floors", None) or ()):
+		frappe.publish_realtime("wt3d_stock_changed", {"floors": [floor]}, doctype="Warehouse", docname=floor)
 
 
 def floor_of(warehouse):

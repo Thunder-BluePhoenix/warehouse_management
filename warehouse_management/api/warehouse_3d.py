@@ -129,7 +129,7 @@ def get_companies():
 
 
 @frappe.whitelist()
-def get_warehouse_groups(company=None):
+def get_warehouse_groups(company: str | None = None):
 	"""Return all Floor warehouses grouped under their Building."""
 	_require_view_permission()
 	params = []
@@ -158,7 +158,7 @@ def get_warehouse_groups(company=None):
 
 
 @frappe.whitelist()
-def get_slots(group_warehouse):
+def get_slots(group_warehouse: str):
 	"""Return all Slot warehouses under a Floor, with their levels."""
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", group_warehouse, throw=True)
@@ -335,7 +335,7 @@ def _levels_by_slot(slot_names, allowed):
 
 
 @frappe.whitelist(methods=["POST"])
-def save_slot_position(warehouse, row, col, row_gap=0):
+def save_slot_position(warehouse: str, row: int, col: int, row_gap: float = 0):
 	doc = _get_doc_for_write(warehouse)
 	doc.update({"wt_row": _int(row), "wt_col": _int(col), "wt_row_gap": _flt(row_gap)})
 	doc.save()
@@ -343,7 +343,7 @@ def save_slot_position(warehouse, row, col, row_gap=0):
 
 
 @frappe.whitelist()
-def get_floor_layout(group_warehouse):
+def get_floor_layout(group_warehouse: str):
 	"""Return the saved Floor Plan editor grid (rows/cells incl. span & aisle flags) for a Floor.
 
 	This is purely editor metadata - it does not drive the 3D scene (which reads
@@ -363,7 +363,7 @@ def get_floor_layout(group_warehouse):
 
 
 @frappe.whitelist(methods=["POST"])
-def save_floor_layout(group_warehouse, layout):
+def save_floor_layout(group_warehouse: str, layout: str | dict | list):
 	"""Persist the Floor Plan editor grid as JSON on the Floor warehouse."""
 	doc = _get_doc_for_write(group_warehouse)
 	doc.wt_floor_layout = layout if isinstance(layout, str) else json.dumps(layout)
@@ -372,7 +372,7 @@ def save_floor_layout(group_warehouse, layout):
 
 
 @frappe.whitelist(methods=["POST"])
-def save_uom_capacity(warehouse, uom, capacity):
+def save_uom_capacity(warehouse: str, uom: str, capacity: float):
 	doc = _get_doc_for_write(warehouse)
 	row = next((r for r in doc.get("wt_uom_capacities") or [] if r.uom == uom), None)
 	if row:
@@ -430,7 +430,7 @@ def get_uom_list():
 
 
 @frappe.whitelist()
-def get_parent_warehouse_options(wt_warehouse_type, company=None):
+def get_parent_warehouse_options(wt_warehouse_type: str, company: str | None = None):
 	"""Valid parents for a given Warehouse Type (3D): one theatre level up.
 	Building's valid parent is the company's root warehouse (e.g. 'All Warehouses - ABBR')."""
 	_require_view_permission()
@@ -456,7 +456,7 @@ def get_parent_warehouse_options(wt_warehouse_type, company=None):
 
 
 @frappe.whitelist()
-def get_warehouse_manage_list(company=None):
+def get_warehouse_manage_list(company: str | None = None):
 	"""Full warehouse list (all theatre roles, incl. disabled) for the Manage Warehouses panel."""
 	_require_edit_permission()
 	filters = {"company": company} if company else {}
@@ -478,7 +478,7 @@ def get_warehouse_manage_list(company=None):
 
 
 @frappe.whitelist()
-def get_warehouse_detail(warehouse):
+def get_warehouse_detail(warehouse: str):
 	"""Full field set for the edit form, incl. the WT UOM Capacities child table."""
 	_require_edit_permission()
 	doc = frappe.get_doc("Warehouse", warehouse)
@@ -503,7 +503,7 @@ def get_warehouse_detail(warehouse):
 
 
 @frappe.whitelist(methods=["POST"])
-def create_warehouse(data):
+def create_warehouse(data: str | dict):
 	_require_edit_permission()
 	if isinstance(data, str):
 		data = json.loads(data)
@@ -536,7 +536,7 @@ def create_warehouse(data):
 
 
 @frappe.whitelist(methods=["POST"])
-def update_warehouse(warehouse, data):
+def update_warehouse(warehouse: str, data: str | dict):
 	if isinstance(data, str):
 		data = json.loads(data)
 
@@ -587,7 +587,7 @@ def _has_open_quantities(warehouse):
 
 
 @frappe.whitelist(methods=["POST"])
-def delete_warehouse(warehouse):
+def delete_warehouse(warehouse: str):
 	"""Hard-delete when the warehouse has no stock history; disable it when it has history but no
 	open quantities. Never disables a warehouse that still holds or expects stock, because ERPNext
 	rejects every posting to a disabled warehouse and that stock would be stranded."""
@@ -620,7 +620,15 @@ def delete_warehouse(warehouse):
 
 
 @frappe.whitelist(methods=["POST"])
-def split_area(warehouse, new_name, length=0, breadth=0, max_weight_kg=0, keep=None, moves=None):
+def split_area(
+	warehouse: str,
+	new_name: str,
+	length: float = 0,
+	breadth: float = 0,
+	max_weight_kg: float = 0,
+	keep: str | dict | None = None,
+	moves: str | list | None = None,
+):
 	"""Carve a new area (Level) out of `warehouse`, e.g. an overflow pile beside a full one.
 
 	The new area gets the same parent, bay type and limit action, its own size and weight limit, and
@@ -725,7 +733,7 @@ def _locate(warehouses):
 
 
 @frappe.whitelist()
-def find_locations(query):
+def find_locations(query: str):
 	"""Where is it? Serial No, Batch or Item (code/name), across every floor the user may see."""
 	_require_view_permission()
 	q = (query or "").strip()
@@ -825,7 +833,7 @@ def find_locations(query):
 
 
 @frappe.whitelist()
-def get_level_items(warehouse):
+def get_level_items(warehouse: str):
 	"""Every item in one level, including its totes (the floor payload carries only the top 20)."""
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
@@ -879,7 +887,7 @@ def _capacities(levels):
 
 
 @frappe.whitelist(methods=["POST"])
-def sync_putaway_rules(warehouse, items=None):
+def sync_putaway_rules(warehouse: str, items: str | list | None = None):
 	"""Create or update ERPNext Putaway Rules from the WT UOM capacities of every level at or under
 	`warehouse`, so the capacity drawn in 3D is the one ERPNext uses to place stock.
 
@@ -955,7 +963,7 @@ def sync_putaway_rules(warehouse, items=None):
 
 
 @frappe.whitelist()
-def suggest_free_bay(floor, item_code=None, qty=1):
+def suggest_free_bay(floor: str, item_code: str | None = None, qty: float = 1):
 	"""First level on the floor (row, column, level order) that can take `qty` of the item:
 	room in its UOM capacity (or empty when it has none), a compatible bay type, and within its weight limit."""
 	_require_view_permission()

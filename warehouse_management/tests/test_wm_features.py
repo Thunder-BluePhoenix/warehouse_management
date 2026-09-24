@@ -243,4 +243,6 @@ class TestWarehouseFeatures(WMTestCase):
 		self.receive(self.item("_WF Live Part"), level.name)
 		with patch("frappe.publish_realtime") as publish:
 			warehouse_rules._publish_changed_floors()  # what the after-commit callback runs
-		publish.assert_called_once_with("wt3d_stock_changed", {"floors": [floor.name]})
+		publish.assert_called_once_with(
+			"wt3d_stock_changed", {"floors": [floor.name]}, doctype="Warehouse", docname=floor.name
+		)

@@ -85,7 +85,20 @@ function notify(message, indicator='green') {
   notify._t = setTimeout(()=>{ store.toast = null; }, 5000);
 }
 function shortWh(wh) { return (wh||'').replace(/\s*-\s*[A-Z0-9]{1,8}$/,''); }
-const POLL_MS = 30000;  // standalone page refresh (no socket there); desk pages use realtime events
+const POLL_MS = 30000;
+// Desk live refresh: stock events are published to the floor's own document room (see warehouse_rules),
+// so follow the floor on screen. Frappe checks read permission on subscribe and throttles it to 1/s.
+function watchFloor(id) {
+  if (!(window.frappe && frappe.realtime && frappe.realtime.doc_subscribe)) return;
+  if (watchFloor.cur && watchFloor.cur !== id) frappe.realtime.doc_unsubscribe('Warehouse', watchFloor.cur);
+  watchFloor.cur = id;
+  const subscribe = () => {
+    if (watchFloor.cur !== id) return;
+    if (frappe.flags.doc_subscribe) { setTimeout(subscribe, 1100); return; }
+    frappe.realtime.doc_subscribe('Warehouse', id);
+  };
+  subscribe();
+}  // standalone page refresh (no socket there); desk pages use realtime events
 function callSetup(method, args={}) { return apiCall(SETUP_API_PREFIX + method, args); }
 
 /* ─────────────────────────────────────────────────────────────
@@ -1225,6 +1238,7 @@ const actions = {
   async selectGroup(g) {
     store.curGrp=g;
     store.imAllItems={};
+    watchFloor(g.id);
     store.dpOpen=false;
     store.imOpen=false;
     store.sidebarOpen=false;
@@ -1307,7 +1321,7 @@ const actions = {
     const d=Object.values(engine.meshMap).find(x=>x.slot.wh===slotWh&&x.lv.wh===lvWh);
     if (d){ const k=lvKey(d.slot,d.lv); engine.highlight(k); store.selKey=k; actions.openDP(d); }
     const lv=store.slots.find(s=>s.wh===slotWh)?.levels.find(l=>l.wh===lvWh);
-    if (lv) call('save_uom_capacity',{warehouse:lvWh,uom:lv.uoms[ui].u,capacity:val}).catch(()=>{});
+    if (lv) call('save_uom_capacity',{warehouse:lvWh,uom:lv.uoms[ui].u,capacity:parseFloat(val)||0}).catch(()=>{});
   },
 
   openCfg(slotWh) {
