@@ -21,7 +21,10 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()
-		cls.company = frappe.db.get_value("Company", {}, "name")
+		# ERPNext's test company on CI (bootstrap_test_data), else whatever the dev site has
+		cls.company = frappe.db.get_value("Company", "_Test Company") or frappe.db.get_value(
+			"Company", {}, "name"
+		)
 		if not cls.company:
 			raise unittest.SkipTest("needs at least one Company on the test site")
 		cls.root = frappe.db.get_value(
