@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import erpnext
 import frappe
 from frappe.utils import add_days, nowdate
 
@@ -83,6 +84,8 @@ class TestWmsOperations(WMTestCase):
 			frappe.db.get_value("Warehouse", tote.warehouse, ["wt_warehouse_type", "parent_warehouse"]),
 			("Tote", slot.name),
 		)
+		if erpnext.is_perpetual_inventory_enabled(self.company):  # pinned, so moves never change it
+			self.assertTrue(frappe.db.get_value("Warehouse", tote.warehouse, "account"))
 		part = self.item("_WO Tote Part")
 		loose = self.item("_WO Tote Loose")
 		self.receive(part, tote.warehouse, qty=3)

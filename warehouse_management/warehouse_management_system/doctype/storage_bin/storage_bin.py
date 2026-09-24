@@ -1,6 +1,7 @@
 # Copyright (c) 2026, Thunder BluePhoenix and contributors
 # For license information, please see license.txt
 
+import erpnext
 import frappe
 from frappe import _
 from frappe.model.document import Document
@@ -32,6 +33,9 @@ class StorageBin(Document):
 				"parent_warehouse": root,
 				"is_group": 0,
 				"wt_warehouse_type": TOTE,
+				# Pin the stock account. Without one a warehouse inherits it from its ancestors, so moving
+				# the tote between branches with different accounts would silently move its value too.
+				"account": self._stock_account(root),
 			}
 		)
 		# the tote's warehouse is system-managed: creating the tote is the permitted act, and
@@ -46,6 +50,13 @@ class StorageBin(Document):
 				{"doctype": "Storage Bin Movement", "storage_bin": self.name, "to_location": first}
 			).insert()
 			self.reload()
+
+	def _stock_account(self, root):
+		if not erpnext.is_perpetual_inventory_enabled(self.company):
+			return None
+		from erpnext.stock import get_warehouse_account
+
+		return get_warehouse_account(frappe.get_doc("Warehouse", self.location or root), raise_error=False)
 
 	def on_trash(self):
 		if not self.warehouse:

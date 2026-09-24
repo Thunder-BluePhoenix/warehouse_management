@@ -162,6 +162,7 @@ class WmsScan {
 			target_label: s.kind === "tote" ? "🧺 " + s.label : s.label,
 		});
 		this.item = null;
+		this.qty.set_value(1);
 		frappe.utils.play_sound("click");
 	}
 
@@ -350,7 +351,7 @@ class WmsScan {
 	add_style() {
 		if (document.getElementById("wms-scan-style")) return;
 		$(`<style id="wms-scan-style">
-			.wms-scan { max-width: 640px; margin: 0 auto; padding: 8px 0 40px; }
+			.wms-scan { max-width: 640px; margin: 0 auto; padding: 8px 12px 40px; }
 			.wms-scan .wms-input input { font-size: 18px; height: 48px; }
 			.wms-scan .wms-qty { max-width: 160px; }
 			.wms-scan .wms-prompt { font-size: 15px; margin: 8px 0 12px; }
