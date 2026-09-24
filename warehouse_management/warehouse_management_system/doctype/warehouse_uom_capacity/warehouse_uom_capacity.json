@@ -10,26 +10,28 @@
  ],
  "fields": [
   {
+   "columns": 6,
    "fieldname": "uom",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "UOM",
    "options": "UOM",
-   "reqd": 1,
-   "columns": 6
+   "reqd": 1
   },
   {
+   "columns": 6,
+   "default": "0",
    "fieldname": "capacity",
    "fieldtype": "Float",
    "in_list_view": 1,
-   "label": "Capacity",
-   "default": "0",
-   "columns": 6
+   "label": "Capacity"
   }
  ],
- "index_web_pages_for_search": 1,
+ "index_web_pages_for_search": 0,
  "istable": 1,
  "links": [],
+ "modified": "2026-09-25 12:00:00.000000",
+ "modified_by": "Administrator",
  "module": "Warehouse Management System",
  "name": "Warehouse UOM Capacity",
  "owner": "Administrator",

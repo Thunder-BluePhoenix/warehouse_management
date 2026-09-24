@@ -1,7 +1,7 @@
 app_name = "warehouse_management"
 app_title = "Warehouse Management System"
 app_publisher = "Thunder BluePhoenix"
-app_description = "A comprehensive warehouse management system for inventory, storage locations, stock movements, receiving, picking, packing, and dispatch operations, with 3D and 2D warehouse storage visualization."
+app_description = "3D/2D warehouse visualisation and yard/warehouse operations on top of ERPNext stock: layouts, capacities, bay types, gate entries and live stock views."
 app_email = "bluephoenix00995@gmail.com"
 app_license = "gpl-3.0"
 
@@ -54,6 +54,7 @@ fixtures = [
 
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {"Warehouse": "public/js/warehouse.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -271,3 +272,16 @@ fixtures = [
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+
+# ─────────────────────────────────────────────────────────────
+# Storage rules and live refresh (warehouse_management/warehouse_rules.py)
+# ─────────────────────────────────────────────────────────────
+
+doc_events = {
+	"Warehouse": {"validate": "warehouse_management.warehouse_rules.set_area"},
+	**{
+		dt: {"before_submit": "warehouse_management.warehouse_rules.validate_storage_rules"}
+		for dt in ("Stock Entry", "Purchase Receipt", "Purchase Invoice", "Stock Reconciliation")
+	},
+	"Stock Ledger Entry": {"on_submit": "warehouse_management.warehouse_rules.queue_viewer_refresh"},
+}

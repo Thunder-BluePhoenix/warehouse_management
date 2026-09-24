@@ -1,0 +1,105 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-25 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "storage_rules_section",
+  "enforce_weight_block",
+  "column_break_rules",
+  "weight_alarm_percent",
+  "putaway_section",
+  "default_putaway_source",
+  "picking_section",
+  "notify_customer_on_short_pick"
+ ],
+ "fields": [
+  {
+   "fieldname": "storage_rules_section",
+   "fieldtype": "Section Break",
+   "label": "Storage Rules"
+  },
+  {
+   "fieldname": "enforce_weight_block",
+   "fieldtype": "Check",
+   "default": "1",
+   "label": "Enforce Block on Weight Limits",
+   "description": "When off, levels set to Block only warn (alarm mode), so no posting is ever refused for weight."
+  },
+  {
+   "fieldname": "column_break_rules",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "weight_alarm_percent",
+   "fieldtype": "Percent",
+   "default": "0",
+   "label": "Weight Alarm At (%)",
+   "description": "Warn when a posting fills a level to this share of its weight limit. 0 = warn only above the limit."
+  },
+  {
+   "fieldname": "putaway_section",
+   "fieldtype": "Section Break",
+   "label": "Put-away"
+  },
+  {
+   "fieldname": "default_putaway_source",
+   "fieldtype": "Link",
+   "options": "Warehouse",
+   "label": "Default Put-away Source",
+   "description": "Where received stock waits before it is put away. The scan screen starts from here."
+  },
+  {
+   "fieldname": "picking_section",
+   "fieldtype": "Section Break",
+   "label": "Picking"
+  },
+  {
+   "fieldname": "notify_customer_on_short_pick",
+   "fieldtype": "Check",
+   "default": "1",
+   "label": "Email Customer on Short Pick",
+   "description": "When a pick finishes short, email the Sales Order contact what ships now and what is back-ordered."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-25 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Warehouse Management System",
+ "name": "WMS Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "System Manager",
+   "write": 1,
+   "create": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "Stock Manager",
+   "write": 1,
+   "create": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "Stock User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "issingle": 1,
+ "track_changes": 1
+}

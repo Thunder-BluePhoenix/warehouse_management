@@ -1,0 +1,24 @@
+{
+ "creation": "2026-09-25 18:00:00.000000",
+ "doctype": "Page",
+ "modified": "2026-09-25 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Warehouse Management System",
+ "name": "wms-scan",
+ "owner": "Administrator",
+ "page_name": "wms-scan",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Stock Manager"
+  },
+  {
+   "role": "Stock User"
+  }
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "WMS Scan"
+}

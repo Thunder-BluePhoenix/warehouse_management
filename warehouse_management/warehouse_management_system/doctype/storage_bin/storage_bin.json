@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-25 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "bin_id",
+  "bin_type",
+  "company",
+  "column_break_loc",
+  "location",
+  "last_moved_on",
+  "warehouse",
+  "disabled"
+ ],
+ "fields": [
+  {
+   "fieldname": "bin_id",
+   "fieldtype": "Data",
+   "label": "Bin ID",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "Printed on the tote's label; this is what gets scanned."
+  },
+  {
+   "fieldname": "bin_type",
+   "fieldtype": "Data",
+   "label": "Type / Size",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Company",
+   "reqd": 1,
+   "set_only_once": 1,
+   "in_standard_filter": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "column_break_loc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "options": "Warehouse",
+   "label": "Current Location",
+   "set_only_once": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "A Level. Set it when creating the tote; after that, move it with a scan or the Move button."
+  },
+  {
+   "fieldname": "last_moved_on",
+   "fieldtype": "Datetime",
+   "label": "Last Moved On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "options": "Warehouse",
+   "label": "Stock Warehouse",
+   "read_only": 1,
+   "no_copy": 1,
+   "description": "The tote's own warehouse: its stock is the tote's contents."
+  },
+  {
+   "fieldname": "disabled",
+   "fieldtype": "Check",
+   "label": "Disabled"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [
+  {
+   "link_doctype": "Storage Bin Movement",
+   "link_fieldname": "storage_bin",
+   "group": "History"
+  }
+ ],
+ "modified": "2026-09-25 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Warehouse Management System",
+ "name": "Storage Bin",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "System Manager",
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "Stock Manager",
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "role": "Stock User",
+   "write": 1,
+   "create": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "field:bin_id",
+ "naming_rule": "By fieldname",
+ "track_changes": 1
+}

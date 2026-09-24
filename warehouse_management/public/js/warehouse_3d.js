@@ -9,21 +9,42 @@ const { createApp, defineComponent, ref, reactive, computed, watch, onMounted, o
 /* ─────────────────────────────────────────────────────────────
    HELPERS & CONSTANTS
 ───────────────────────────────────────────────────────────── */
-const FC  = p => p>=90?0xf87171:p>=70?0xfb923c:p>=40?0xfacc15:0x4ade80;
-const FCH = p => p>=90?'#f87171':p>=70?'#fb923c':p>=40?'#facc15':'#4ade80';
+// Fill colours. p = null means "stocked but no capacity/weight limit set" (nothing to measure against);
+// p > 100 means over capacity (allowed by the ledger, flagged here).
+const NOCAP = 0x64748b, NOCAP_H = '#64748b', OVER = 0x991b1b, OVER_H = '#b91c1c';
+const FC  = p => p==null?NOCAP:p>100?OVER:p>=90?0xf87171:p>=70?0xfb923c:p>=40?0xfacc15:0x4ade80;
+const FCH = p => p==null?NOCAP_H:p>100?OVER_H:p>=90?'#f87171':p>=70?'#fb923c':p>=40?'#facc15':'#4ade80';
 const UCH = ['#60a5fa','#4ade80','#fbbf24','#f87171','#a78bfa','#34d399'];
 const fmt  = n => (parseFloat(n)||0).toLocaleString('en-IN',{maximumFractionDigits:1});
 const fmtK = n => { n=parseFloat(n)||0; return n>=1000?(n/1000).toFixed(1)+'K':fmt(n); };
 
+// Fill % of a level = its tightest constraint: each UOM with a capacity, and the weight limit if set.
+// Not capped at 100 (over-capacity shows). Returns null when nothing is configured to measure against.
 function lvFill(lv) {
-  const wc = (lv.uoms||[]).filter(u=>u.cap>0);
-  if (!wc.length) return (lv.uoms||[]).some(u=>u.qty>0) ? 50 : 0;
-  return Math.round(wc.reduce((s,u)=>s+Math.min(100,Math.round(u.qty/u.cap*100)),0)/wc.length);
+  const parts = (lv.uoms||[]).filter(u=>u.cap>0).map(u=>u.qty/u.cap*100);
+  if (lv.max_kg>0) parts.push((lv.kg||0)/lv.max_kg*100);
+  return parts.length ? Math.round(Math.max(...parts)) : null;
 }
+function lvHasStock(lv) { return (lv.uoms||[]).some(u=>u.qty>0); }
+function fillText(lv) { const p=lvFill(lv); return !lvHasStock(lv)&&!p ? 'Empty' : p==null ? 'No capacity' : p+'%'; }
 function slotFill(sl) {
-  return sl.levels.length ? Math.round(sl.levels.reduce((s,l)=>s+lvFill(l),0)/sl.levels.length) : 0;
+  const known = sl.levels.map(lvFill).filter(p=>p!=null);
+  return known.length ? Math.max(...known) : null;
 }
-function hasStock(sl) { return sl.levels.some(l=>(l.uoms||[]).some(u=>u.qty>0)); }
+function hasStock(sl) { return sl.levels.some(lvHasStock); }
+// Quantities in different UOMs are never added together: {Nos: 12, Kg: 340}
+function qtyByUom(levels) {
+  const m = {};
+  levels.forEach(l=>(l.uoms||[]).forEach(u=>{ if (u.qty) m[u.u]=(m[u.u]||0)+u.qty; }));
+  return m;
+}
+function fmtUoms(m, max=2) {
+  const e = Object.entries(m).sort((a,b)=>b[1]-a[1]);
+  if (!e.length) return '—';
+  const shown = e.slice(0,max).map(([u,q])=>fmtK(q)+' '+u).join(' · ');
+  return e.length>max ? shown+' +'+(e.length-max) : shown;
+}
+function zoneLabel(sl) { return (sl.zone_path||[]).length ? sl.zone_path.join(' › ')+' › ' : ''; }
 function lvKey(sl,lv)  { return sl.wh+'__'+lv.wh; }
 
 /* ─────────────────────────────────────────────────────────────
@@ -56,6 +77,15 @@ function apiCall(fullMethod, args={}) {
 }
 
 function call(method, args={}) { return apiCall(API_PREFIX + method, args); }
+function appVisible() { const a=document.getElementById('wt-app'); return !!(a && a.offsetParent!==null); }
+function notify(message, indicator='green') {
+  if (window.frappe && frappe.show_alert) { frappe.show_alert({message, indicator}, 5); return; }
+  store.toast = {message, indicator};
+  clearTimeout(notify._t);
+  notify._t = setTimeout(()=>{ store.toast = null; }, 5000);
+}
+function shortWh(wh) { return (wh||'').replace(/\s*-\s*[A-Z0-9]{1,8}$/,''); }
+const POLL_MS = 30000;  // standalone page refresh (no socket there); desk pages use realtime events
 function callSetup(method, args={}) { return apiCall(SETUP_API_PREFIX + method, args); }
 
 /* ─────────────────────────────────────────────────────────────
@@ -121,6 +151,14 @@ const CSS = `
 #wt-search-ico{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--wt-text3);pointer-events:none}
 #wt-search-clear{position:absolute;right:7px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--wt-text3);cursor:pointer;background:none;border:none;padding:0;line-height:1}
 #wt-search-clear:hover{color:var(--wt-text)}
+#wt-hits{position:absolute;top:32px;left:0;width:min(400px,calc(100vw - 32px));max-height:320px;overflow-y:auto;background:var(--wt-bg2);border:1px solid var(--wt-border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.35);z-index:40}
+.wt-hit{padding:7px 10px;border-bottom:1px solid var(--wt-border);cursor:pointer;font-size:11px;color:var(--wt-text)}
+.wt-hit:hover{background:var(--wt-card)}
+.wt-hit-kind{font-size:9px;font-weight:700;color:var(--wt-accent2);text-transform:uppercase}
+.wt-hit-qty{color:var(--wt-text3)}
+.wt-hit-where{font-size:10px;color:var(--wt-text2);margin-top:2px}
+.wt-hit-more{padding:6px 10px;font-size:10px;color:var(--wt-text3)}
+#wt-toast{position:absolute;bottom:56px;left:50%;transform:translateX(-50%);z-index:120;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 #wt-switcher{display:flex;align-items:center;gap:6px;pointer-events:all;margin-left:8px}
 .wt-sw-group{display:flex;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:2px;gap:2px}
 #wt-app.light .wt-sw-group{background:rgba(0,0,0,.06);border-color:rgba(0,0,0,.1)}
@@ -303,6 +341,8 @@ const CSS = `
 .wt-2d-tile.mid{background:rgba(250,204,21,.12);border-color:#facc15}
 .wt-2d-tile.high{background:rgba(251,146,60,.12);border-color:#fb923c}
 .wt-2d-tile.full{background:rgba(248,113,113,.12);border-color:#f87171}
+.wt-2d-tile.over{background:rgba(185,28,28,.22);border-color:#b91c1c}
+.wt-2d-tile.nocap{background:rgba(100,116,139,.14);border-color:#64748b}
 #wt-app.light .wt-2d-tile.low{background:#f0fdf4;border-color:#22c55e}
 #wt-app.light .wt-2d-tile.mid{background:#fefce8;border-color:#eab308}
 #wt-app.light .wt-2d-tile.high{background:#fff7ed;border-color:#f97316}
@@ -455,7 +495,9 @@ const CSS = `
 .wt-wm-badge.Building{background:rgba(167,139,250,.18);color:#a78bfa}
 .wt-wm-badge.Floor{background:rgba(96,165,250,.18);color:#60a5fa}
 .wt-wm-badge.Slot{background:rgba(74,222,128,.18);color:#4ade80}
-.wt-wm-badge.Bin{background:rgba(251,191,36,.18);color:#fbbf24}
+.wt-wm-badge.Zone{background:rgba(45,212,191,.18);color:#2dd4bf}
+.wt-wm-badge.Level{background:rgba(251,191,36,.18);color:#fbbf24}
+.wt-wm-badge.Tote{background:rgba(244,114,182,.18);color:#f472b6}
 .wt-wm-badge.disabled{background:rgba(248,113,113,.18);color:#f87171}
 .wt-wm-icon-btn{width:24px;height:24px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);color:rgba(255,255,255,.6);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0}
 .wt-wm-icon-btn:hover{background:rgba(255,255,255,.14);color:#fff}
@@ -507,6 +549,8 @@ const CSS = `
 /* ─────────────────────────────────────────────────────────────
    STORE  (shared reactive state)
 ───────────────────────────────────────────────────────────── */
+const FORM_EXTRAS = { wt_render_mode:'', wt_bay_type:'', wt_max_weight_kg:0, wt_weight_limit_action:'Warn', wt_length:0, wt_breadth:0 };
+
 const store = reactive({
   isDark: true,
   curView: '3d',
@@ -562,7 +606,7 @@ const store = reactive({
   whFormLoading: false,
   whFormSaving: false,
   whFormError: '',
-  whFormLockType: false,  // true when opened via "+ Add level" - context is fixed to Bin under a known Slot
+  whFormLockType: false,  // true when opened via "+ Add level" - context is fixed to Level under a known Slot
   whForm: {
     name: null, warehouse_name: '', company: '', wt_warehouse_type: 'Slot',
     parent_warehouse: '', is_group: true, wt_row: 0, wt_col: 0, wt_row_gap: 0,
@@ -573,6 +617,11 @@ const store = reactive({
   whUomOptions: [],
   whDeleteTarget: null,
   whDeleting: false,
+  whBayTypes: [],
+  imAllItems: {},     // level warehouse -> full item list, loaded on demand
+  searchHits: [],     // serial / batch / item hits across floors (server)
+  searchOpen: false,
+  toast: null,
 });
 
 /* ─────────────────────────────────────────────────────────────
@@ -581,8 +630,9 @@ const store = reactive({
 function filteredSlots() {
   if (!store.searchQuery) return store.slots;
   const q = store.searchQuery.toLowerCase();
+  const hitWh = new Set(store.searchHits.map(h=>h.warehouse));
   return store.slots.filter(sl =>
-    sl.levels.some(lv =>
+    sl.levels.some(lv => hitWh.has(lv.wh) ||
       (lv.items||[]).some(it =>
         (it.c||'').toLowerCase().includes(q) ||
         (it.n||'').toLowerCase().includes(q)
@@ -595,9 +645,9 @@ function hudStats() {
   const slots = store.slots;
   const bins  = slots.flatMap(sl => sl.levels);
   const total = bins.length;
-  const occ   = bins.filter(l => (l.uoms||[]).some(u => u.qty > 0)).length;
-  const qty   = slots.reduce((s,sl)=>s+sl.levels.reduce((ss,l)=>(l.uoms||[]).reduce((sss,u)=>sss+(u.qty||0),ss),0),0);
-  return { total, occ, free: total-occ, qty: fmtK(qty) };
+  const occ   = bins.filter(lvHasStock).length;
+  const byUom = qtyByUom(bins);
+  return { total, occ, free: total-occ, qty: fmtUoms(byUom, 1), qtyTitle: fmtUoms(byUom, 20) };
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -652,7 +702,10 @@ class ThreeEngine {
     this.scene.add(this.rootGrp);
     this._sizeRenderer();
     this._startAnimate();
-    new ResizeObserver(()=>this._sizeRenderer()).observe(cwEl);
+    // The loop stops while the viewer is hidden (other desk page, background tab, 2D view);
+    // coming back resizes the canvas or fires visibilitychange, which restarts it.
+    new ResizeObserver(()=>{ this._sizeRenderer(); this._startAnimate(); }).observe(cwEl);
+    document.addEventListener('visibilitychange', ()=>this._startAnimate());
     store.threeReady=true;
   }
 
@@ -666,8 +719,10 @@ class ThreeEngine {
 
   _startAnimate() {
     if (this._animRunning) return;
+    if (!this._visible()) return;
     this._animRunning=true;
     const loop=()=>{
+      if (!this._visible()) { this._animRunning=false; return; }
       requestAnimationFrame(loop);
       const t=performance.now()*.001;
       this.theta  +=(this.tT -this.theta) *.08;
@@ -681,6 +736,19 @@ class ThreeEngine {
       this.renderer.render(this.scene,this.camera);
     };
     loop();
+  }
+
+  _visible() {
+    return !document.hidden && !!this.cwEl && this.cwEl.offsetParent!==null && store.curView==='3d';
+  }
+
+  _clear() {
+    // free GPU memory of the previous floor: removing meshes alone leaks their geometries and materials
+    this.rootGrp.traverse(o=>{
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material)?o.material:[o.material]).forEach(m=>m.dispose());
+    });
+    while (this.rootGrp.children.length) this.rootGrp.remove(this.rootGrp.children[0]);
   }
 
   _updateCamera() {
@@ -727,8 +795,9 @@ class ThreeEngine {
 
   buildScene(slots) {
     const THREE=window.THREE;
-    while (this.rootGrp.children.length) this.rootGrp.remove(this.rootGrp.children[0]);
+    this._clear();
     this.meshMap={};
+    const parking = store.curGrp?.render_mode === 'Parking';
     store.selKey=null;
     const SW=2.2, SD=2.2, GAP=.6, LVH=1.0, BASE=.1;
     const cols=Math.max(...slots.map(s=>s.col),0)+1;
@@ -755,6 +824,7 @@ class ThreeEngine {
       const nL=sl.levels.length;
       const cx=ox+sl.col*(SW+GAP)+SW/2;
       const cz=oz+(rowZOffset[sl.row]||0)+SD/2;
+      if (parking) { this._parkingSlot(sl, cx, cz, SW, SD, BASE, baseMat, pilMat); return; }
       const base=new THREE.Mesh(new THREE.BoxGeometry(SW,BASE,SD),baseMat);
       base.position.set(cx,BASE/2,cz); base.castShadow=true; base.receiveShadow=true;
       this.rootGrp.add(base);
@@ -776,7 +846,7 @@ class ThreeEngine {
         shell.position.set(cx,y0+LVH/2,cz); this.rootGrp.add(shell);
         let fillM=null;
         if (hs){
-          const fh=Math.max(.05,(lp/100)*(LVH-.12));
+          const fh=Math.max(.05,(Math.min(lp==null?35:lp,100)/100)*(LVH-.12));
           fillM=new THREE.Mesh(
             new THREE.BoxGeometry(SW-.26,fh,SD-.26),
             new THREE.MeshStandardMaterial({color:col,roughness:.38,metalness:.14,emissive:col,emissiveIntensity:.2})
@@ -793,6 +863,45 @@ class ThreeEngine {
         this.rootGrp.add(proxy);
         this.meshMap[lvKey(sl,lv)]={fillM,shellM:shell,proxy,lv,slot:sl,li,col};
       });
+    });
+    this._startAnimate();
+  }
+
+  // Parking layout: the slot is a pillar and its levels are bays side by side on the ground around it.
+  _parkingSlot(sl, cx, cz, SW, SD, BASE, baseMat, pilMat) {
+    const THREE=window.THREE;
+    const n=Math.max(1,sl.levels.length), gc=Math.ceil(Math.sqrt(n)), gr=Math.ceil(n/gc);
+    const cw=SW/gc, cd=SD/gr;
+    const post=new THREE.Mesh(new THREE.BoxGeometry(.14,1.4,.14),pilMat);
+    post.position.set(cx,.7,cz); post.castShadow=true; this.rootGrp.add(post);
+    sl.levels.forEach((lv,li)=>{
+      const lp=lvFill(lv), hs=lvHasStock(lv);
+      const col=hs?FC(lp):(store.isDark?0x101827:0xe8edf5);
+      const bx=cx-SW/2+cw*(li%gc)+cw/2, bz=cz-SD/2+cd*Math.floor(li/gc)+cd/2;
+      const pad=new THREE.Mesh(new THREE.BoxGeometry(cw-.1,BASE,cd-.1),baseMat);
+      pad.position.set(bx,BASE/2,bz); pad.receiveShadow=true; this.rootGrp.add(pad);
+      const shell=new THREE.Mesh(
+        new THREE.BoxGeometry(cw-.16,.7,cd-.16),
+        new THREE.MeshStandardMaterial({color:hs?col:(store.isDark?0x0f1520:0xdde3ef),transparent:true,opacity:hs?.13:.06,side:THREE.BackSide,roughness:.3,depthWrite:false})
+      );
+      shell.position.set(bx,BASE+.35,bz); this.rootGrp.add(shell);
+      let fillM=null;
+      if (hs){
+        const h=.25+.45*(Math.min(lp==null?60:lp,100)/100);  // occupied bay: a block sized by fill
+        fillM=new THREE.Mesh(
+          new THREE.BoxGeometry(cw-.3,h,cd-.3),
+          new THREE.MeshStandardMaterial({color:col,roughness:.38,metalness:.14,emissive:col,emissiveIntensity:.2})
+        );
+        fillM.position.set(bx,BASE+h/2,bz); fillM.castShadow=true; this.rootGrp.add(fillM);
+      }
+      const proxy=new THREE.Mesh(
+        new THREE.BoxGeometry(cw-.1,.8,cd-.1),
+        new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false})
+      );
+      proxy.position.set(bx,BASE+.4,bz);
+      proxy.userData={slot:sl,lv,key:lvKey(sl,lv)};
+      this.rootGrp.add(proxy);
+      this.meshMap[lvKey(sl,lv)]={fillM,shellM:shell,proxy,lv,slot:sl,li,col};
     });
   }
 
@@ -923,11 +1032,11 @@ const actions = {
     try {
       const result = await callSetup('scan_warehouse_tree');
       store.setupScan = result;
-      // Seed default mapping by best-guess: last depth = Bin, first = Building, etc.
+      // Seed default mapping by best-guess: last depth = Level, first = Building, etc.
       const mapping = {};
       if (result && result.depths && result.depths.length) {
         const depths = result.depths.map(d=>d.depth).sort((a,b)=>a-b);
-        const roleSeq = ['Building','Floor','Slot','Bin'];
+        const roleSeq = ['Building','Floor','Slot','Level'];
         const offset = Math.max(0, roleSeq.length - depths.length);
         depths.forEach((d, i) => {
           mapping[d] = roleSeq[Math.min(i + offset, roleSeq.length-1)];
@@ -937,7 +1046,7 @@ const actions = {
       store.setupStep = 2;
     } catch(e) {
       console.error('WT3D: scan failed', e);
-      if (window.frappe) frappe.show_alert({message:'Scan failed: '+e.message, indicator:'red'}, 5);
+      notify('Scan failed: '+e.message, 'red');
     } finally {
       store.loading = false;
     }
@@ -956,7 +1065,7 @@ const actions = {
     try {
       const mapping = Object.entries(store.setupMapping).map(([depth, role]) => ({ depth: parseInt(depth), role }));
       if (!mapping.length) {
-        if (window.frappe) frappe.show_alert({message:'Assign at least one level before continuing.', indicator:'orange'}, 4);
+        notify('Assign at least one level before continuing.', 'orange');
         store.setupSaving = false;
         return;
       }
@@ -966,7 +1075,7 @@ const actions = {
       store.setupStep = 3;
     } catch(e) {
       console.error('WT3D: apply mapping failed', e);
-      if (window.frappe) frappe.show_alert({message:'Save failed: '+e.message, indicator:'red'}, 5);
+      notify('Save failed: '+e.message, 'red');
     } finally {
       store.setupSaving = false;
     }
@@ -1075,6 +1184,7 @@ const actions = {
     const onKeyUp=e=>{keys[e.code]=false;};
     const moveLoop=()=>{
       if(!store.aisleMode) return;
+      if(!appVisible()){ actions.exitAisleView(); return; }
       const fwd=(keys['KeyW']||keys['ArrowUp']?1:0)-(keys['KeyS']||keys['ArrowDown']?1:0);
       const str=(keys['KeyD']||keys['ArrowRight']?1:0)-(keys['KeyA']||keys['ArrowLeft']?1:0);
       if(fwd||str) engine.moveAisle(fwd,str,0,0);
@@ -1114,6 +1224,7 @@ const actions = {
 
   async selectGroup(g) {
     store.curGrp=g;
+    store.imAllItems={};
     store.dpOpen=false;
     store.imOpen=false;
     store.sidebarOpen=false;
@@ -1207,10 +1318,10 @@ const actions = {
 
   closeCfg() { store.cfgOpen=false; },
 
-  // Bins (stack levels) are now created/edited/deleted through the same
+  // Levels (stack levels) are now created/edited/deleted through the same
   // create_warehouse/update_warehouse/delete_warehouse endpoints used by
   // Manage Warehouses, so "Configure slot" is just a slot-scoped view over
-  // the same Bin CRUD instead of its own separate save/delete pathway.
+  // the same Level CRUD instead of its own separate save/delete pathway.
   addBinToSlot() {
     if (!store.cfgSlot) return;
     actions.openWhForm('create', null, store.cfgSlot.wh);
@@ -1224,7 +1335,7 @@ const actions = {
     actions.confirmDeleteWh({ name: lv.wh, warehouse_name: lv.label });
   },
 
-  // Keeps the Configure Slot modal's snapshot in sync after a Bin create/
+  // Keeps the Configure Slot modal's snapshot in sync after a Level create/
   // edit/delete happens in a modal stacked on top of it.
   refreshCfgFromSlots() {
     if (!store.cfgOpen || !store.cfgSlot) return;
@@ -1242,11 +1353,11 @@ const actions = {
           warehouse: store.cfgSlot.wh,
           data: JSON.stringify({ warehouse_name: newLabel }),
         });
-        if (window.frappe) frappe.show_alert({message:'Slot renamed', indicator:'green'}, 3);
+        notify('Slot renamed', 'green');
         await actions.loadGroups();
         if (store.curGrp) await actions.selectGroup(store.curGrp);
       } catch(e) {
-        if (window.frappe) frappe.show_alert({message:'Rename failed: '+e.message, indicator:'red'}, 5);
+        notify('Rename failed: '+e.message, 'red');
         return; // keep the modal open so the label edit isn't lost
       }
     }
@@ -1270,7 +1381,7 @@ const actions = {
       store.whManageList = (await call('get_warehouse_manage_list')) || [];
     } catch(e) {
       console.error('WT: manage list', e);
-      if (window.frappe) frappe.show_alert({message:'Failed to load warehouses: '+e.message, indicator:'red'}, 5);
+      notify('Failed to load warehouses: '+e.message, 'red');
     } finally {
       store.whManageLoading = false;
     }
@@ -1288,6 +1399,12 @@ const actions = {
     if (!store.whUomOptions.length) {
       try { store.whUomOptions = (await call('get_uom_list')) || []; } catch(e){ console.error('WT: uoms', e); }
     }
+    if (!store.whBayTypes.length) {
+      try {
+        const rows = await apiCall('frappe.client.get_list', {doctype:'Bay Type', fields:JSON.stringify(['name']), limit_page_length:0});
+        store.whBayTypes = (rows||[]).map(r=>r.name);
+      } catch(e){ console.error('WT: bay types', e); }
+    }
 
     if (mode === 'edit' && warehouseName) {
       store.whFormLoading = true;
@@ -1304,6 +1421,7 @@ const actions = {
           wt_col: d.wt_col || 0,
           wt_row_gap: d.wt_row_gap || 0,
           uom_capacities: (d.uom_capacities||[]).map(r=>({uom:r.uom, capacity:r.capacity})),
+          wt_render_mode: d.wt_render_mode || '', wt_bay_type: d.wt_bay_type || '', wt_max_weight_kg: d.wt_max_weight_kg || 0, wt_weight_limit_action: d.wt_weight_limit_action || 'Warn', wt_length: d.wt_length || 0, wt_breadth: d.wt_breadth || 0,
         };
       } catch(e) {
         store.whFormError = 'Failed to load warehouse: '+e.message;
@@ -1311,22 +1429,22 @@ const actions = {
         store.whFormLoading = false;
       }
     } else if (presetParent) {
-      // "+ Add level" from Configure Slot - creating a Bin directly under a known Slot.
+      // "+ Add level" from Configure Slot - creating a Level directly under a known Slot.
       store.whFormLoading = true;
       try {
         const parentDetail = await call('get_warehouse_detail', {warehouse: presetParent});
         store.whForm = {
           name: null, warehouse_name: '',
           company: parentDetail.company || store.whCompanies[0]?.name || '',
-          wt_warehouse_type: 'Bin', parent_warehouse: presetParent, is_group: false,
-          wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [],
+          wt_warehouse_type: 'Level', parent_warehouse: presetParent, is_group: false,
+          wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [], ...FORM_EXTRAS,
         };
       } catch(e) {
         store.whFormError = 'Failed to load slot: '+e.message;
         store.whForm = {
           name: null, warehouse_name: '', company: store.whCompanies[0]?.name || '',
-          wt_warehouse_type: 'Bin', parent_warehouse: presetParent, is_group: false,
-          wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [],
+          wt_warehouse_type: 'Level', parent_warehouse: presetParent, is_group: false,
+          wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [], ...FORM_EXTRAS,
         };
       } finally {
         store.whFormLoading = false;
@@ -1336,7 +1454,7 @@ const actions = {
         name: null, warehouse_name: '',
         company: store.whCompanies[0]?.name || '',
         wt_warehouse_type: 'Slot', parent_warehouse: '', is_group: false,
-        wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [],
+        wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [], ...FORM_EXTRAS,
       };
     }
     await actions.refreshWhParentOptions();
@@ -1357,7 +1475,7 @@ const actions = {
   },
 
   onWhTypeChange() {
-    store.whForm.is_group = store.whForm.wt_warehouse_type !== 'Bin';
+    store.whForm.is_group = store.whForm.wt_warehouse_type !== 'Level';
     store.whForm.parent_warehouse = '';
     actions.refreshWhParentOptions();
   },
@@ -1381,14 +1499,20 @@ const actions = {
       wt_col: store.whForm.wt_col || 0,
       wt_row_gap: store.whForm.wt_row_gap || 0,
       uom_capacities: (store.whForm.uom_capacities||[]).filter(r=>r.uom),
+      wt_render_mode: store.whForm.wt_render_mode || null,
+      wt_bay_type: store.whForm.wt_bay_type || null,
+      wt_max_weight_kg: store.whForm.wt_max_weight_kg || 0,
+      wt_weight_limit_action: store.whForm.wt_weight_limit_action || 'Warn',
+      wt_length: store.whForm.wt_length || 0,
+      wt_breadth: store.whForm.wt_breadth || 0,
     };
     try {
       if (store.whFormMode === 'edit') {
         await call('update_warehouse', {warehouse: store.whForm.name, data: JSON.stringify(payload)});
-        if (window.frappe) frappe.show_alert({message:'Warehouse updated', indicator:'green'}, 3);
+        notify('Warehouse updated', 'green');
       } else {
         await call('create_warehouse', {data: JSON.stringify(payload)});
-        if (window.frappe) frappe.show_alert({message:'Warehouse created', indicator:'green'}, 3);
+        notify('Warehouse created', 'green');
       }
       store.whFormOpen = false;
       if (store.whManageOpen) await actions.loadWhManageList();
@@ -1410,9 +1534,7 @@ const actions = {
     store.whDeleting = true;
     try {
       const res = await call('delete_warehouse', {warehouse: store.whDeleteTarget.name});
-      if (window.frappe) {
-        frappe.show_alert({message: res.message || 'Warehouse deleted', indicator: res.disabled?'orange':'green'}, 4);
-      }
+      notify(res.message || 'Warehouse deleted', res.disabled?'orange':'green');
       if (store.whFormOpen && store.whForm.name === store.whDeleteTarget.name) store.whFormOpen = false;
       store.whDeleteTarget = null;
       if (store.whManageOpen) await actions.loadWhManageList();
@@ -1420,7 +1542,7 @@ const actions = {
       if (store.curGrp) await actions.selectGroup(store.curGrp);
       actions.refreshCfgFromSlots();
     } catch(e) {
-      if (window.frappe) frappe.show_alert({message:'Delete failed: '+e.message, indicator:'red'}, 5);
+      notify('Delete failed: '+e.message, 'red');
     } finally {
       store.whDeleting = false;
     }
@@ -1449,23 +1571,92 @@ const actions = {
       if(isMobile) v2d.style.top='80px';
     }
     if (v==='3d' && store.slots.length) engine.buildScene(filteredSlots());
+    engine._startAnimate();
   },
 
-  applySearch(q) {
+  async applySearch(q) {
     store.searchQuery=q?q.toLowerCase():'';
+    store.searchHits=[];
+    if (q && q.length>=2) {
+      try {
+        const hits = (await call('find_locations',{query:q})) || [];
+        if (store.searchQuery !== q.toLowerCase()) return;  // a newer search superseded this one
+        store.searchHits = hits;
+      } catch(e){ console.error('WT: search', e); }
+    }
+    store.searchOpen = store.searchHits.length>0;
     if (store.curView==='3d') engine.buildScene(filteredSlots());
-    // 2D re-renders reactively
+    // 2D re-renders reactively. A single hit on this floor: go straight to it.
+    const here = store.searchHits.filter(h=>h.floor && h.floor===store.curGrp?.id);
+    if (here.length===1 && store.searchHits.length===1) { store.searchOpen=false; actions.focusLevel(here[0].slot, here[0].warehouse); }
   },
 
   clearSearch() {
     store.searchQuery='';
+    store.searchHits=[];
+    store.searchOpen=false;
     if (store.curView==='3d') engine.buildScene(store.slots);
+  },
+
+  async goToHit(h) {
+    store.searchOpen=false;
+    if (!h.floor) { notify('That location is not part of a 3D floor layout', 'orange'); return; }
+    if (store.curGrp?.id !== h.floor) {
+      const g = store.groups.find(x=>x.id===h.floor);
+      if (!g) { notify('That floor is not available to you', 'orange'); return; }
+      await actions.selectGroup(g);
+    }
+    actions.focusLevel(h.slot, h.warehouse);
+  },
+
+  focusLevel(slotWh, lvWh) {
+    if (store.curView==='3d') {
+      const d=Object.values(engine.meshMap).find(x=>x.slot.wh===slotWh&&x.lv.wh===lvWh);
+      if (d) { engine.highlight(lvKey(d.slot,d.lv)); actions.openDP(d); }
+    } else {
+      actions.open2DModalLevel(slotWh, lvWh);
+    }
+  },
+
+  async loadAllItems(wh) {
+    try { store.imAllItems[wh] = (await call('get_level_items',{warehouse:wh})) || []; }
+    catch(e){ notify('Failed to load items: '+e.message, 'red'); }
+  },
+
+  // Desk only: the dialog is a Frappe form dialog shared with the Warehouse form (public/js/wm_desk.js)
+  splitArea(wh) {
+    frappe.require('/assets/warehouse_management/js/wm_desk.js', ()=>window.wm.split_area(wh, ()=>actions.refreshCurrentFloor()));
+  },
+
+  async syncPutaway(slotWh) {
+    try {
+      const r = await call('sync_putaway_rules',{warehouse:slotWh});
+      const skipped = (r.skipped||[]).length;
+      notify(`Putaway rules: ${r.created} created, ${r.updated} updated`+(skipped?`, ${skipped} skipped (capacity below stock)`:''), skipped?'orange':'green');
+    } catch(e){ notify('Putaway sync failed: '+e.message, 'red'); }
+  },
+
+  // Re-read the open floor in place (live refresh): keeps the selection, no spring animation.
+  async refreshCurrentFloor() {
+    if (!store.curGrp || store.loading || store.aisleMode || store.fpOpen || store.cfgOpen || store.whFormOpen) return;
+    const keep = store.selKey;
+    try {
+      store.slots = (await call('get_slots',{group_warehouse:store.curGrp.id})) || [];
+      store.imAllItems = {};
+      if (store.curView==='3d') {
+        engine.buildScene(filteredSlots());
+        if (keep && engine.meshMap[keep]) {
+          engine.highlight(keep);
+          if (store.dpOpen) store.dpData = engine.meshMap[keep];
+        }
+      }
+    } catch(e){ console.error('WT: refresh', e); }
   },
 
   // Floor Plan
   async fpOpen(group, currentSlots) {
     if (!group) {
-      if (window.frappe) frappe.show_alert({message:'Select a warehouse group first',indicator:'orange'},3);
+      notify('Select a warehouse group first', 'orange');
       return;
     }
     store.fpGroup=group;
@@ -1541,7 +1732,7 @@ const actions = {
     store.fpDragIdx = ri;
     if (ev?.dataTransfer) {
       ev.dataTransfer.effectAllowed = 'move';
-      try { ev.dataTransfer.setData('text/plain', String(ri)); } catch(e){}
+      try { ev.dataTransfer.setData('text/plain', String(ri)); } catch(e){ /* some browsers refuse setData; the drag still works */ }
     }
   },
   fpRowDragOver(ri) {
@@ -1584,10 +1775,10 @@ const actions = {
       store.fpSaveOk=true;
       clearTimeout(store._fpSaveOkTimer);
       store._fpSaveOkTimer=setTimeout(()=>{store.fpSaveOk=false;},3000);
-      if (window.frappe) frappe.show_alert({message:'Floor plan saved',indicator:'green'},3);
+      notify('Floor plan saved', 'green');
       await actions.selectGroup(store.fpGroup);
     } catch(e){
-      if (window.frappe) frappe.show_alert({message:'Save failed: '+e.message,indicator:'red'},5);
+      notify('Save failed: '+e.message, 'red');
     } finally {
       store.fpSaving=false;
     }
@@ -1656,7 +1847,7 @@ const TopBar = defineComponent({
       searchVal.value='';
       actions.clearSearch();
     }
-    return { store, hud, searchVal, onSearch, clearSearch, actions, fmtK };
+    return { store, hud, searchVal, onSearch, clearSearch, actions, fmtK, fmt, shortWh };
   },
   template: `
     <div id="wt-top">
@@ -1676,19 +1867,26 @@ const TopBar = defineComponent({
       </div>
       <div id="wt-search-wrap">
         <span id="wt-search-ico">🔍</span>
-        <input id="wt-search" type="text" placeholder="Search item code…" autocomplete="off"
+        <input id="wt-search" type="text" placeholder="Search item, serial or batch…" autocomplete="off"
           :value="searchVal" @input="onSearch"/>
         <button v-if="searchVal" id="wt-search-clear" @click="clearSearch">✕</button>
+        <div v-if="store.searchOpen" id="wt-hits">
+          <div v-for="(h,i) in store.searchHits.slice(0,12)" :key="i" class="wt-hit" @click="actions.goToHit(h)">
+            <div><span class="wt-hit-kind">{{h.kind}}</span> <b>{{h.ref}}</b> <span class="wt-hit-qty">× {{fmt(h.qty)}}</span></div>
+            <div class="wt-hit-where">{{h.floor_name||'Not in a 3D floor'}}<span v-for="z in (h.zone_path||[])"> › {{z}}</span><span v-if="h.slot_label"> › {{h.slot_label}}</span> / {{shortWh(h.warehouse)}}</div>
+          </div>
+          <div v-if="store.searchHits.length>12" class="wt-hit-more">+{{store.searchHits.length-12}} more — refine the search</div>
+        </div>
       </div>
       <div id="wt-search-tag" :class="store.searchQuery?'on':''">
         <span>{{store.searchQuery}}</span>
         <span id="wt-search-tag-x" @click="clearSearch">✕</span>
       </div>
       <div class="wt-pills">
-        <div class="wt-pill"><div class="wt-pv">{{hud.total}}</div><div class="wt-pl">Bins</div></div>
+        <div class="wt-pill"><div class="wt-pv">{{hud.total}}</div><div class="wt-pl">Levels</div></div>
         <div class="wt-pill occ"><div class="wt-pv">{{hud.occ}}</div><div class="wt-pl">Active</div></div>
         <div class="wt-pill free"><div class="wt-pv">{{hud.free}}</div><div class="wt-pl">Empty</div></div>
-        <div class="wt-pill qty"><div class="wt-pv">{{hud.qty}}</div><div class="wt-pl">Total qty</div></div>
+        <div class="wt-pill qty" :title="hud.qtyTitle"><div class="wt-pv">{{hud.qty}}</div><div class="wt-pl">Stock</div></div>
       </div>
     </div>
   `,
@@ -1708,6 +1906,8 @@ const BottomBar = defineComponent({
         <span class="wt-li"><span class="wt-lb" style="background:#facc15"></span>Mid</span>
         <span class="wt-li"><span class="wt-lb" style="background:#fb923c"></span>High</span>
         <span class="wt-li"><span class="wt-lb" style="background:#f87171"></span>Full</span>
+        <span class="wt-li"><span class="wt-lb" style="background:#b91c1c"></span>Over</span>
+        <span class="wt-li"><span class="wt-lb" style="background:#64748b"></span>No capacity</span>
         <span class="wt-li"><span class="wt-lb" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18)"></span>Empty</span>
       </div>
     </div>
@@ -1720,18 +1920,19 @@ const BottomBar = defineComponent({
 const Tooltip = defineComponent({
   name: 'Tooltip',
   setup(){
-    return { store, UCH, fmt, FCH, lvFill };
+    return { store, UCH, fmt, FCH, lvFill, fillText, zoneLabel };
   },
   computed:{
     uoms(){ return this.store.ttData?.lv?.uoms||[]; },
     lp(){ return this.store.ttData?lvFill(this.store.ttData.lv):0; },
+    bar(){ return Math.min(this.lp==null?0:this.lp,100); },
     clr(){ const hs=(this.uoms).some(u=>u.qty>0); return hs?FCH(this.lp):'rgba(255,255,255,.2)'; },
   },
   template: `
     <div id="wt-tt" v-if="store.ttVisible"
       :style="{left:store.ttX+'px', top:store.ttY+'px', display:'block'}">
       <div id="wt-tt-title" v-if="store.ttData">
-        {{store.ttData.slot.label}} · {{store.ttData.lv.label}} ({{store.ttData.lv.wh}})
+        {{zoneLabel(store.ttData.slot)}}{{store.ttData.slot.label}} · {{store.ttData.lv.label}} · {{fillText(store.ttData.lv)}}
       </div>
       <div v-if="uoms.length">
         <div v-for="(u,i) in uoms" :key="i" class="wt-tt-row">
@@ -1741,7 +1942,13 @@ const Tooltip = defineComponent({
         </div>
       </div>
       <div v-else style="font-size:9px;color:var(--wt-text3);margin-top:2px">Empty level</div>
-      <div class="wt-tt-bar"><div class="wt-tt-fill" :style="{width:lp+'%',background:clr}"></div></div>
+      <div v-if="store.ttData && store.ttData.lv.max_kg>0" class="wt-tt-row">
+        <span class="wt-tt-dot" style="background:#94a3b8"></span>
+        <span class="wt-tt-lbl">Weight</span>
+        <span class="wt-tt-val">{{fmt(store.ttData.lv.kg)}}{{store.ttData.lv.kg_partial?'+':''}}/{{fmt(store.ttData.lv.max_kg)}} kg</span>
+      </div>
+      <div v-if="store.ttData && store.ttData.lv.bay_type" style="font-size:9px;color:var(--wt-text2);margin-top:2px">Bay type: {{store.ttData.lv.bay_type}}</div>
+      <div class="wt-tt-bar"><div class="wt-tt-fill" :style="{width:bar+'%',background:clr}"></div></div>
     </div>
   `,
 });
@@ -1752,7 +1959,7 @@ const Tooltip = defineComponent({
 const DetailPanel = defineComponent({
   name: 'DetailPanel',
   setup(){
-    return { store, UCH, fmt, FCH, fmtK, lvFill, lvKey, actions };
+    return { store, UCH, fmt, FCH, fmtK, lvFill, lvKey, actions, fillText, zoneLabel, lvHasStock, inDesk: !!window.frappe };
   },
   computed:{
     d(){ return this.store.dpData; },
@@ -1764,7 +1971,8 @@ const DetailPanel = defineComponent({
       <button id="wt-dp-x" @click="actions.closeDP()">✕</button>
       <template v-if="d">
         <div class="wt-dp-title">{{d.slot.label}} — {{d.lv.label}}</div>
-        <div class="wt-dp-sub">{{d.lv.wh}} · {{lp}}% · {{hs?'In stock':'Empty'}}</div>
+        <div class="wt-dp-sub">{{zoneLabel(d.slot)}}{{d.lv.wh}} · {{fillText(d.lv)}}<span v-if="d.lv.bay_type"> · {{d.lv.bay_type}} bay</span><span v-if="d.lv.area"> · area {{fmt(d.lv.area)}}</span></div>
+        <div v-if="d.lv.totes?.length" class="wt-dp-sub">🧺 {{d.lv.totes.length}} tote{{d.lv.totes.length>1?'s':''}}: {{d.lv.totes.join(', ')}}</div>
 
         <span class="wt-dp-sec">UOM fill</span>
         <div v-if="!d.lv.uoms?.length" style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px">No UOMs configured</div>
@@ -1775,13 +1983,23 @@ const DetailPanel = defineComponent({
             @change="actions.updateCap(d.slot.wh, d.lv.wh, ui, $event.target.value)"/><span v-else>{{u.cap>0?fmt(u.cap):'∞'}}</span></div>
         </div>
 
+        <template v-if="d.lv.max_kg>0 || d.lv.kg>0">
+          <span class="wt-dp-sec">Weight</span>
+          <div class="wt-urow" style="margin-bottom:6px">
+            <div class="wt-ulbl">kg</div>
+            <div class="wt-utrack"><div class="wt-ufill" :style="{width:(d.lv.max_kg>0?Math.min(100,Math.round(d.lv.kg/d.lv.max_kg*100)):100)+'%',background:d.lv.max_kg>0&&d.lv.kg>d.lv.max_kg?'#b91c1c':'#94a3b8'}"></div></div>
+            <div class="wt-uval">{{fmt(d.lv.kg)}}{{d.lv.kg_partial?'+':''}}/{{d.lv.max_kg>0?fmt(d.lv.max_kg):'∞'}}</div>
+          </div>
+          <div v-if="d.lv.kg_partial" style="font-size:9px;color:var(--wt-text3);margin-bottom:6px">Some items here have no weight set</div>
+        </template>
+
         <div class="wt-divider"></div>
         <span class="wt-dp-items-lbl">Items in level</span>
         <div v-if="!d.lv.items?.length" style="font-size:10px;color:rgba(255,255,255,.3)">No stock</div>
-        <div v-for="it in (d.lv.items||[])" :key="it.c" class="wt-dp-item">
+        <div v-for="it in (d.lv.items||[])" :key="it.c+'|'+(it.t||'')" class="wt-dp-item">
           <div>
             <div class="wt-dp-icode">{{it.c}}</div>
-            <div class="wt-dp-imeta">{{it.n}} · {{it.u}}</div>
+            <div class="wt-dp-imeta">{{it.n}} · {{it.u}}<span v-if="it.t"> · 🧺 {{it.t}}</span></div>
           </div>
           <div class="wt-dp-iqty">{{fmt(it.a)}}</div>
         </div>
@@ -1794,8 +2012,8 @@ const DetailPanel = defineComponent({
           <div class="wt-dp-lv-hdr">
             <div class="wt-dp-lv-name">{{lv2.label}} — {{lv2.wh}}</div>
             <div class="wt-dp-lv-pct"
-              :style="{color:(lv2.uoms||[]).some(u=>u.qty>0)?FCH(lvFill(lv2)):'rgba(255,255,255,.2)'}">
-              {{(lv2.uoms||[]).some(u=>u.qty>0)?lvFill(lv2)+'%':'Empty'}}
+              :style="{color:lvHasStock(lv2)?FCH(lvFill(lv2)):'rgba(255,255,255,.2)'}">
+              {{fillText(lv2)}}
             </div>
           </div>
           <div v-for="(u,ui) in (lv2.uoms||[])" :key="ui" class="wt-urow">
@@ -1808,6 +2026,10 @@ const DetailPanel = defineComponent({
         </div>
 
         <button v-if="store.canEdit" class="wt-cfg-btn" @click="actions.openCfg(d.slot.wh)">⚙ Configure stack levels</button>
+        <button v-if="store.canEdit" class="wt-cfg-btn" style="background:#475569" @click="actions.syncPutaway(d.slot.wh)"
+          title="Create or update ERPNext Putaway Rules from this slot's capacities">⇄ Sync putaway rules</button>
+        <button v-if="store.canEdit && inDesk" class="wt-cfg-btn" style="background:#475569" @click="actions.splitArea(d.lv.wh)"
+          title="Carve a new area out of this level and move some stock into it">✂ Split this area</button>
       </template>
     </div>
   `,
@@ -1819,15 +2041,17 @@ const DetailPanel = defineComponent({
 const ItemModal = defineComponent({
   name: 'ItemModal',
   setup(){
-    return { store, fmt, fmtK, actions, lvFill };
+    return { store, fmt, fmtK, actions, lvFill, fmtUoms, qtyByUom };
   },
   computed:{
     d(){ return this.store.imData; },
     sl(){ return this.d?.slot; },
     lv(){ return this.d?.lv; },
-    items(){ return this.d?.lv?.items||[]; },
-    totalQty(){ return this.items.reduce((s,it)=>s+(parseFloat(it.a)||0),0); },
-    totalVal(){ return this.items.reduce((s,it)=>s+(parseFloat(it.stock_value)||(parseFloat(it.a||0)*180)),0); },
+    items(){ const lv=this.d?.lv; return lv ? (this.store.imAllItems[lv.wh] || lv.items || []) : []; },
+    itemCount(){ return this.d?.lv?.item_count || this.items.length; },
+    truncated(){ return this.itemCount > this.items.length; },
+    totalQty(){ const m={}; this.items.forEach(it=>{ m[it.u]=(m[it.u]||0)+(parseFloat(it.a)||0); }); return fmtUoms(m, 3); },
+    totalVal(){ return this.items.reduce((s,it)=>s+(parseFloat(it.stock_value)||0),0); },
     showTabs(){ return this.sl && this.sl.levels.length>1 && this.store.imKeepTabs; },
   },
   template: `
@@ -1836,7 +2060,7 @@ const ItemModal = defineComponent({
         <div id="wt-im-hdr">
           <div style="flex:1;min-width:0">
             <div id="wt-im-title">{{sl?.label}} — {{lv?.label}}</div>
-            <div id="wt-im-sub" v-if="lv">{{lv.wh}} · Actual Qty: {{fmt(lv.uoms?.reduce((s,u)=>s+(u.qty||0),0)||0)}}</div>
+            <div id="wt-im-sub" v-if="lv">{{lv.wh}} · Stock: {{fmtUoms(qtyByUom([lv]), 4)}}</div>
             <div id="wt-im-lvtabs" v-if="showTabs">
               <button v-for="tab in sl.levels" :key="tab.wh"
                 :class="['wt-im-lvtab', tab.wh===lv.wh?'active':'']"
@@ -1849,35 +2073,40 @@ const ItemModal = defineComponent({
           <div class="wt-im-stats">
             <div class="wt-im-stat">
               <div class="wt-im-stat-lbl">ITEMS</div>
-              <div class="wt-im-stat-val">{{items.length}}</div>
+              <div class="wt-im-stat-val">{{itemCount}}</div>
             </div>
             <div class="wt-im-stat">
               <div class="wt-im-stat-lbl">TOTAL QTY</div>
-              <div class="wt-im-stat-val blue">{{fmt(totalQty)}}</div>
+              <div class="wt-im-stat-val blue" style="font-size:16px">{{totalQty}}</div>
             </div>
             <div class="wt-im-stat">
               <div class="wt-im-stat-lbl">STOCK VALUE</div>
               <div class="wt-im-stat-val green">₹{{Math.round(totalVal).toLocaleString('en-IN')}}</div>
             </div>
           </div>
+          <div v-if="truncated" style="margin-bottom:10px;font-size:12px;color:#4a5568">
+            Showing the top {{items.length}} of {{itemCount}} items (totals cover the rows shown).
+            <button class="wt-im-lvtab" style="margin-left:6px" @click="actions.loadAllItems(lv.wh)">Show all {{itemCount}}</button>
+          </div>
           <div class="wt-im-tbl-wrap">
             <table id="wt-im-tbl">
               <thead><tr>
                 <th style="color:#718096;width:28px">#</th>
-                <th>Item Code</th><th>Item Name</th><th>Group</th><th>UOM</th>
+                <th>Item Code</th><th>Item Name</th><th>Group</th><th>UOM</th><th>Tote</th>
                 <th>Actual</th><th>Reserved</th><th>Available</th>
                 <th>Rate ₹</th><th>Value ₹</th>
               </tr></thead>
               <tbody>
                 <tr v-if="!items.length">
-                  <td colspan="10" class="wt-im-empty">No items with stock in this level</td>
+                  <td colspan="11" class="wt-im-empty">No items with stock in this level</td>
                 </tr>
-                <tr v-for="(it,i) in items" :key="it.c">
+                <tr v-for="(it,i) in items" :key="it.c+'|'+(it.t||'')">
                   <td class="wt-im-idx">{{i+1}}</td>
                   <td><a class="wt-im-icode" :href="'/app/item/'+encodeURIComponent(it.c)" target="_blank">{{it.c}}</a></td>
                   <td class="wt-im-iname" :title="it.n||''">{{it.n||''}}</td>
                   <td class="wt-im-grp" :title="it.g||''">{{it.g||'—'}}</td>
                   <td><span class="wt-im-uom">{{it.u||''}}</span></td>
+                  <td class="wt-im-grp">{{it.t||'—'}}</td>
                   <td class="wt-im-qty">{{fmt(it.a)}}</td>
                   <td :class="(it.r>0)?'wt-im-res':'wt-im-dim'">{{it.r>0?fmt(it.r):'—'}}</td>
                   <td :class="((parseFloat(it.a)||0)-(parseFloat(it.r)||0)>0)?'wt-im-avl':'wt-im-dim'">{{fmt((parseFloat(it.a)||0)-(parseFloat(it.r)||0))}}</td>
@@ -1923,7 +2152,7 @@ const ConfigModal = defineComponent({
             <div class="wt-cfg-preview">
               <div v-for="lv in store.cfgLvs" :key="lv.wh" style="flex:1;display:flex;align-items:flex-end;height:100%">
                 <div class="wt-cfg-pv-lv"
-                  :style="{width:'100%',height:Math.max(10,Math.round((lvFill(lv)/100)*38))+'px',background:(lv.uoms||[]).some(u=>u.qty>0)?FCH(lvFill(lv)):'rgba(255,255,255,.07)'}"
+                  :style="{width:'100%',height:Math.max(10,Math.round((Math.min(lvFill(lv)==null?30:lvFill(lv),100)/100)*38))+'px',background:(lv.uoms||[]).some(u=>u.qty>0)?FCH(lvFill(lv)):'rgba(255,255,255,.07)'}"
                   :title="lv.label"></div>
               </div>
             </div>
@@ -1937,7 +2166,7 @@ const ConfigModal = defineComponent({
               <button class="wt-del-btn" title="Delete bin" @click="actions.deleteBinFromSlot(lv)">✕</button>
             </div>
             <button class="wt-cfg-add-btn" @click="actions.addBinToSlot()">+ Add level</button>
-            <span class="wt-whform-hint" style="display:block;margin-top:4px">Levels are Bin warehouses under this slot — add, edit, or delete them the same way as in Manage Warehouses.</span>
+            <span class="wt-whform-hint" style="display:block;margin-top:4px">Levels are leaf warehouses under this slot — add, edit, or delete them the same way as in Manage Warehouses.</span>
             <div class="wt-cfg-field">
               <label>Slot label</label>
               <input v-model="labelVal"/>
@@ -2049,11 +2278,12 @@ const WarehouseFormModal = defineComponent({
               <select v-model="store.whForm.wt_warehouse_type" :disabled="store.whFormLockType" @change="actions.onWhTypeChange()">
                 <option value="Building">Building</option>
                 <option value="Floor">Floor</option>
+                <option value="Zone">Zone (zone / aisle / rack; nestable)</option>
                 <option value="Slot">Slot</option>
-                <option value="Bin">Bin</option>
+                <option value="Level">Level</option>
               </select>
               <span class="wt-whform-hint" v-if="!store.whFormLockType">Role of this warehouse in the 3D view</span>
-              <span class="wt-whform-hint" v-else>Adding a level (Bin) to this slot</span>
+              <span class="wt-whform-hint" v-else>Adding a level to this slot</span>
             </div>
 
             <div class="wt-whform-field">
@@ -2067,7 +2297,7 @@ const WarehouseFormModal = defineComponent({
               </span>
             </div>
 
-            <label class="wt-whform-check" v-if="store.whForm.wt_warehouse_type!=='Bin'">
+            <label class="wt-whform-check" v-if="store.whForm.wt_warehouse_type!=='Level'">
               <input type="checkbox" v-model="store.whForm.is_group"/>
               Is Group Warehouse
             </label>
@@ -2090,7 +2320,49 @@ const WarehouseFormModal = defineComponent({
               </div>
             </template>
 
-            <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Bin'">
+            <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Floor'">
+              <label>3D Layout</label>
+              <select v-model="store.whForm.wt_render_mode">
+                <option value="">Rack (default)</option>
+                <option value="Rack">Rack</option>
+                <option value="Parking">Parking</option>
+              </select>
+              <span class="wt-whform-hint">Parking draws each slot's levels side by side on the ground as bays</span>
+            </div>
+
+            <template v-if="store.whForm.wt_warehouse_type==='Level'">
+              <div class="wt-whform-field">
+                <label>Bay Type</label>
+                <select v-model="store.whForm.wt_bay_type">
+                  <option value="">— any item —</option>
+                  <option v-for="b in store.whBayTypes" :key="b" :value="b">{{b}}</option>
+                </select>
+                <span class="wt-whform-hint">Items with a Required Bay Type may only be stored in matching levels</span>
+              </div>
+              <div class="wt-whform-row2">
+                <div class="wt-whform-field">
+                  <label>Max Weight (kg)</label>
+                  <input type="number" min="0" v-model.number="store.whForm.wt_max_weight_kg"/>
+                </div>
+                <div class="wt-whform-field">
+                  <label>When exceeded</label>
+                  <select v-model="store.whForm.wt_weight_limit_action"><option>Warn</option><option>Block</option></select>
+                </div>
+              </div>
+              <div class="wt-whform-row2">
+                <div class="wt-whform-field">
+                  <label>Length</label>
+                  <input type="number" min="0" step="0.1" v-model.number="store.whForm.wt_length"/>
+                </div>
+                <div class="wt-whform-field">
+                  <label>Breadth</label>
+                  <input type="number" min="0" step="0.1" v-model.number="store.whForm.wt_breadth"/>
+                </div>
+              </div>
+              <span class="wt-whform-hint" style="display:block;margin:-6px 0 12px">Length × Breadth = area of a floor area (e.g. a scrap pile)</span>
+            </template>
+
+            <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Level'">
               <label>WT UOM Capacities</label>
               <div v-for="(row,i) in store.whForm.uom_capacities" :key="i" class="wt-whform-uom-row">
                 <select v-model="row.uom">
@@ -2251,7 +2523,8 @@ const View2D = defineComponent({
       const secMap={}, secOrder=[];
       slots.forEach(sl=>{
         const nm=(sl.label||sl.wh).replace(/\s*-\s*[A-Z]{1,8}$/,'').split('/').pop().trim();
-        const key=nm.match(/^([A-Za-z]+)/)?.[1]||nm.substring(0,2);
+        // Zones group the tiles when the floor has them; otherwise fall back to the name prefix (A12 -> A)
+        const key=(sl.zone_path||[]).length ? sl.zone_path.join(' › ') : (nm.match(/^([A-Za-z]+)/)?.[1]||nm.substring(0,2));
         if(!secMap[key]){secMap[key]=[];secOrder.push(key);}
         secMap[key].push({...sl,shortName:nm});
       });
@@ -2263,7 +2536,8 @@ const View2D = defineComponent({
         const occ=tiles.filter(s=>hasStock(s)).length;
         const pct=tiles.length?Math.round((occ/tiles.length)*100):0;
         const cntCls=pct>=80?'red':pct>=50?'org':'grn';
-        const avgFp=tiles.length?Math.round(tiles.reduce((s,t)=>s+slotFill(t),0)/tiles.length):0;
+        const known=tiles.map(slotFill).filter(p=>p!=null);
+        const avgFp=known.length?Math.round(known.reduce((a,b)=>a+b,0)/known.length):0;
         const barClr=avgFp>0?FCH(avgFp):'var(--wt-border)';
         return {key,tiles,cols,occ,cntCls,avgFp,barClr};
       });
@@ -2271,13 +2545,13 @@ const View2D = defineComponent({
 
     function tileCls(sl){
       const fp=slotFill(sl), hs=hasStock(sl);
-      return !hs?'empty':fp>=90?'full':fp>=70?'high':fp>=40?'mid':'low';
+      return !hs?'empty':fp==null?'nocap':fp>100?'over':fp>=90?'full':fp>=70?'high':fp>=40?'mid':'low';
     }
-    function tileQty(sl){ return sl.levels.reduce((s,l)=>(l.uoms||[]).reduce((ss,u)=>ss+(u.qty||0),s),0); }
-    function lvColor(lv){ const q=(lv.uoms||[]).reduce((s,u)=>s+(u.qty||0),0); return q>0?FCH(lvFill(lv)):'var(--wt-border)'; }
-    function lvQty(lv){ return (lv.uoms||[]).reduce((s,u)=>s+(u.qty||0),0); }
+    function tileQty(sl){ return fmtUoms(qtyByUom(sl.levels), 1); }
+    function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
+    function lvQty(lv){ return fmtUoms(qtyByUom([lv]), 1); }
 
-    return { store, sections, tileCls, tileQty, lvColor, lvQty, actions, fmtK, fmt, FCH, slotFill, hasStock };
+    return { store, sections, tileCls, tileQty, lvColor, lvQty, actions, fmtK, fmt, FCH, slotFill, hasStock, lvHasStock, zoneLabel, fmtUoms, qtyByUom };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
@@ -2295,18 +2569,18 @@ const View2D = defineComponent({
               <div v-for="(sl,ti) in sec.tiles" :key="sl.wh"
                 :class="['wt-2d-tile', tileCls(sl)]"
                 :style="{'animation-delay':ti*30+'ms'}"
-                :title="sl.wh+(tileQty(sl)>0?'\\nQty: '+fmt(tileQty(sl)):'\\nEmpty')"
+                :title="zoneLabel(sl)+sl.wh+(hasStock(sl)?'\\n'+fmtUoms(qtyByUom(sl.levels),20):'\\nEmpty')"
                 @click="actions.open2DModal(sl.wh)">
                 <div class="wt-2d-tile-name">{{sl.shortName}}</div>
-                <div class="wt-2d-tile-qty">{{tileQty(sl)>0?fmtK(tileQty(sl)):'—'}}</div>
+                <div class="wt-2d-tile-qty">{{hasStock(sl)?tileQty(sl):'—'}}</div>
                 <div v-if="sl.levels && sl.levels.length>1" class="wt-2d-levels">
                   <div v-for="lv in [...sl.levels].reverse()" :key="lv.wh"
                     class="wt-2d-lv-row"
                     @click.stop="actions.open2DModalLevel(sl.wh, lv.wh)">
                     <div class="wt-2d-lv-dot" :style="{background:lvColor(lv)}"></div>
                     <div class="wt-2d-lv-name">{{lv.label.split('/').pop()}}</div>
-                    <div class="wt-2d-lv-qty" :style="{color:lvQty(lv)>0?lvColor(lv):'var(--wt-text3)'}">
-                      {{lvQty(lv)>0?fmtK(lvQty(lv)):'—'}}
+                    <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}">
+                      {{lvHasStock(lv)?lvQty(lv):'—'}}
                     </div>
                   </div>
                 </div>
@@ -2406,6 +2680,17 @@ const View3D = defineComponent({
 /* ─────────────────────────────────────────────────────────────
    COMPONENT: Loading Overlay
 ───────────────────────────────────────────────────────────── */
+const Toast = defineComponent({
+  name: 'Toast',
+  setup(){ return {store}; },
+  template: `
+    <div id="wt-toast" v-if="store.toast"
+      :style="{background:{red:'#b91c1c',orange:'#c2410c',green:'#15803d'}[store.toast.indicator]||'#334155'}">
+      {{store.toast.message}}
+    </div>
+  `,
+});
+
 const Loading = defineComponent({
   name: 'Loading',
   setup(){ return {store}; },
@@ -2444,13 +2729,13 @@ const AislePicker = defineComponent({
    COMPONENT: SetupWizard
    Scans the customer's existing Warehouse parent_warehouse tree
    by depth (no relabeling) and lets a System Manager assign a
-   Building/Floor/Slot/Bin role per depth level.
+   Building/Floor/Zone/Slot/Level role per depth level.
 ───────────────────────────────────────────────────────────── */
 const SetupWizard = defineComponent({
   name: 'SetupWizard',
   setup(){
     onMounted(()=>{ if (!store.setupScan) actions.runScan(); });
-    const roleIcon = { Building:'🏢', Floor:'🗂️', Slot:'📦', Bin:'🧱' };
+    const roleIcon = { Building:'🏢', Floor:'🗂️', Zone:'🧭', Slot:'📦', Level:'🧱', Tote:'🧺' };
     return { store, actions, roleIcon };
   },
   template: `
@@ -2509,8 +2794,9 @@ const SetupWizard = defineComponent({
               @change="actions.setMappingRole(d.depth, $event.target.value)">
               <option value="Building">Building</option>
               <option value="Floor">Floor</option>
+              <option value="Zone">Zone (can repeat)</option>
               <option value="Slot">Slot</option>
-              <option value="Bin">Bin</option>
+              <option value="Level">Level</option>
               <option value="Skip">Skip level</option>
             </select>
           </div>
@@ -2541,8 +2827,8 @@ const SetupWizard = defineComponent({
               <div class="wt-setup-stat-lbl">Slots</div>
             </div>
             <div class="wt-setup-stat">
-              <div class="wt-setup-stat-val">{{store.setupSummary?.Bin || 0}}</div>
-              <div class="wt-setup-stat-lbl">Bins</div>
+              <div class="wt-setup-stat-val">{{store.setupSummary?.Level || 0}}</div>
+              <div class="wt-setup-stat-lbl">Levels</div>
             </div>
           </div>
 
@@ -2567,12 +2853,13 @@ const SetupWizard = defineComponent({
 ───────────────────────────────────────────────────────────── */
 const App = defineComponent({
   name: 'WarehouseTheatreVue',
-  components: { Sidebar, TopBar, BottomBar, Tooltip, DetailPanel, ItemModal, ConfigModal, FloorPlanModal, WarehouseManageModal, WarehouseFormModal, WarehouseDeleteConfirm, View3D, View2D, Loading, AislePicker, SetupWizard },
+  components: { Sidebar, TopBar, BottomBar, Tooltip, DetailPanel, ItemModal, ConfigModal, FloorPlanModal, WarehouseManageModal, WarehouseFormModal, WarehouseDeleteConfirm, View3D, View2D, Loading, AislePicker, SetupWizard, Toast },
   setup(){
     onMounted(async ()=>{
       // Keyboard shortcuts
       document.addEventListener('keydown', e=>{
-        if (e.key==='Escape'){
+        if (e.key==='Escape' && appVisible()){
+          if (store.searchOpen) { store.searchOpen=false; return; }
           actions.closeDP();
           actions.closeCfg();
           actions.closeItemModal();
@@ -2587,6 +2874,17 @@ const App = defineComponent({
       await actions.checkSetup();
       if (store.setupComplete) {
         await actions.loadGroups();
+      }
+      // Live refresh of the open floor when stock moves
+      if (window.frappe && frappe.realtime) {
+        let t;
+        frappe.realtime.on('wt3d_stock_changed', data=>{
+          if (!store.curGrp || !(data.floors||[]).includes(store.curGrp.id)) return;
+          clearTimeout(t);
+          t = setTimeout(()=>{ if (appVisible()) actions.refreshCurrentFloor(); }, 1500);
+        });
+      } else {
+        setInterval(()=>{ if (!document.hidden && appVisible()) actions.refreshCurrentFloor(); }, POLL_MS);
       }
     });
     return { store };
@@ -2617,6 +2915,7 @@ const App = defineComponent({
         <WarehouseFormModal/>
         <WarehouseDeleteConfirm/>
         <AislePicker/>
+        <Toast/>
         <Loading/>
       </template>
     </div>
