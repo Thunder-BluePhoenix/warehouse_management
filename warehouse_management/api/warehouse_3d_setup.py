@@ -5,6 +5,7 @@ import frappe
 from frappe import _
 
 from warehouse_management.api.warehouse_3d import (
+	ROLES,
 	_get_doc_for_write,
 	_require_edit_permission,
 	_require_view_permission,
@@ -88,7 +89,7 @@ def scan_warehouse_tree(company=None):
 def apply_depth_mapping(mapping, company=None):
 	"""
 	mapping: JSON list like [{"depth": 1, "role": "Building"}, {"depth": 2, "role": "Floor"}, ...]
-	role is one of: Building, Floor, Slot, Bin, Skip
+	role is one of: Building, Floor, Zone (may repeat at several depths), Slot, Bin, Skip
 	Writes wt_warehouse_type to every warehouse at each mapped depth (via Document.save, so
 	permissions and Version history apply). Does not rename, move, or otherwise alter the tree.
 	"""
@@ -97,7 +98,7 @@ def apply_depth_mapping(mapping, company=None):
 	if isinstance(mapping, str):
 		mapping = json.loads(mapping)
 
-	valid_roles = {"Building", "Floor", "Slot", "Bin"}
+	valid_roles = set(ROLES)
 	depth_to_role = {int(m["depth"]): m["role"] for m in mapping if m.get("role") in valid_roles}
 	if not depth_to_role:
 		frappe.throw(_("No valid role mapping provided."))

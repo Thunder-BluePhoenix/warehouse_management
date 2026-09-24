@@ -94,8 +94,10 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		api.save_uom_capacity(stocked.name, frappe.db.get_value("Item", item, "stock_uom"), 10)
 		api.save_uom_capacity(cap_only.name, "Kg", 500)
 
-		# 20 levels: the old per-level code ran ~66 queries here; the batched version must stay small and flat
-		with self.assertQueryCount(15):
+		# 20 levels: the old per-level code ran ~66 queries here. The first call also loads metadata and UOM
+		# conversions (once per process/request); a warm call must run only the fixed floor queries.
+		api.get_slots(floor.name)
+		with self.assertQueryCount(12):
 			result = api.get_slots(floor.name)
 
 		self.assertEqual([len(sl["levels"]) for sl in result], [4] * 5)

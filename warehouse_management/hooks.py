@@ -271,3 +271,16 @@ fixtures = [
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
+
+# ─────────────────────────────────────────────────────────────
+# Storage rules and live refresh (warehouse_management/warehouse_rules.py)
+# ─────────────────────────────────────────────────────────────
+
+doc_events = {
+	"Warehouse": {"validate": "warehouse_management.warehouse_rules.set_area"},
+	**{
+		dt: {"before_submit": "warehouse_management.warehouse_rules.validate_storage_rules"}
+		for dt in ("Stock Entry", "Purchase Receipt", "Purchase Invoice", "Stock Reconciliation")
+	},
+	"Stock Ledger Entry": {"on_submit": "warehouse_management.warehouse_rules.queue_viewer_refresh"},
+}

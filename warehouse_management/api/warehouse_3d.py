@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.utils import cint, flt
 
 # Security model (see docs/research/areas/11-codebase-platform.md §6.3):
 # - access comes from ERPNext's own permissions (Role Permission Manager), not a hard-coded role list:
@@ -61,6 +62,47 @@ def _int(v):
 		return 0
 
 
+ROLES = ("Building", "Floor", "Zone", "Slot", "Bin")
+# Optional per-warehouse settings the Manage Warehouses form can edit (all Custom Fields, see fixtures)
+EXTRA_FIELDS = (
+	"wt_render_mode",
+	"wt_bay_type",
+	"wt_max_weight_kg",
+	"wt_weight_limit_action",
+	"wt_length",
+	"wt_breadth",
+	"wt_split_from",
+)
+
+
+def _uom_to_kg(uom):
+	"""kg in one unit of `uom` (via ERPNext's UOM Conversion Factor), or None if it isn't a weight unit."""
+	from erpnext.stock.doctype.item.item import get_uom_conv_factor
+
+	cache = frappe.flags.setdefault("wt3d_uom_kg", {})  # per-request cache
+	if uom not in cache:
+		cache[uom] = (flt(get_uom_conv_factor(uom, "Kg")) or None) if uom else None
+	return cache[uom]
+
+
+def kg_per_unit(stock_uom, weight_per_unit=None, weight_uom=None):
+	"""kg in one stock unit of an item: its stock UOM is a weight, or Item.weight_per_unit/weight_uom is set."""
+	factor = _uom_to_kg(stock_uom)
+	if factor:
+		return factor
+	if flt(weight_per_unit) and weight_uom:
+		unit = _uom_to_kg(weight_uom)
+		return flt(weight_per_unit) * unit if unit else None
+	return None
+
+
+def _floor_bounds(floor):
+	bounds = frappe.db.get_value("Warehouse", floor, ["lft", "rgt"], as_dict=True)
+	if not bounds:
+		frappe.throw(_("Warehouse {0} not found").format(floor))
+	return bounds
+
+
 @frappe.whitelist()
 def get_companies():
 	_require_view_permission()
@@ -83,16 +125,14 @@ def get_warehouse_groups(company=None):
 		"w.warehouse_name AS name, "
 		"w.parent_warehouse AS parent_id, "
 		"pw.warehouse_name AS parent_name, "
-		"COUNT(slot.name) AS slot_count "
+		"COALESCE(w.wt_render_mode, 'Rack') AS render_mode, "
+		"(SELECT COUNT(*) FROM `tabWarehouse` slot "
+		" WHERE slot.lft > w.lft AND slot.rgt < w.rgt "
+		" AND slot.wt_warehouse_type = 'Slot' AND slot.disabled = 0) AS slot_count "
 		"FROM `tabWarehouse` w "
 		"LEFT JOIN `tabWarehouse` pw ON pw.name = w.parent_warehouse "
-		"LEFT JOIN `tabWarehouse` slot "
-		"ON slot.parent_warehouse = w.name "
-		"AND slot.wt_warehouse_type = 'Slot' "
-		"AND slot.disabled = 0 "
 		"WHERE w.wt_warehouse_type = 'Floor' "
-		"AND w.disabled = 0 " + company_filter + "GROUP BY w.name "
-		"ORDER BY pw.warehouse_name, w.warehouse_name"
+		"AND w.disabled = 0 " + company_filter + "ORDER BY pw.warehouse_name, w.warehouse_name"
 	)
 	allowed = _permitted_warehouses()
 	return [r for r in frappe.db.sql(query, params, as_dict=True) if r.id in allowed]
@@ -104,23 +144,38 @@ def get_slots(group_warehouse):
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", group_warehouse, throw=True)
 	allowed = _permitted_warehouses()
+	bounds = _floor_bounds(group_warehouse)
 	slots = frappe.db.sql(
 		"""
 		SELECT
 			w.name             AS wh,
 			w.warehouse_name   AS label,
+			w.lft, w.rgt,
 			COALESCE(w.wt_row, 0)     AS `row`,
 			COALESCE(w.wt_col, 0)     AS col,
 			COALESCE(w.wt_row_gap, 0) AS row_gap
 		FROM `tabWarehouse` w
-		WHERE w.parent_warehouse = %s
+		WHERE w.lft > %(lft)s AND w.rgt < %(rgt)s
 		  AND w.wt_warehouse_type = 'Slot'
 		  AND w.disabled = 0
 		ORDER BY w.wt_row, w.wt_col, w.warehouse_name
 	""",
-		(group_warehouse,),
+		bounds,
 		as_dict=True,
 	)
+	zones = frappe.db.sql(
+		"""
+		SELECT w.warehouse_name AS label, w.lft, w.rgt FROM `tabWarehouse` w
+		WHERE w.lft > %(lft)s AND w.rgt < %(rgt)s AND w.wt_warehouse_type = 'Zone'
+		ORDER BY w.lft
+	""",
+		bounds,
+		as_dict=True,
+	)
+	for sl in slots:
+		# ponytail: slots × zones scan in Python; fine for thousands of each
+		sl["zone_path"] = [z.label for z in zones if z.lft < sl.lft and z.rgt > sl.rgt]
+		del sl["lft"], sl["rgt"]
 	slots = [sl for sl in slots if sl["wh"] in allowed]
 
 	levels = _levels_by_slot([sl["wh"] for sl in slots], allowed)
@@ -131,13 +186,15 @@ def get_slots(group_warehouse):
 
 
 def _levels_by_slot(slot_names, allowed):
-	"""{slot: [level, ...]} for every Bin-role level under the given slots, each with per-UOM fill and its
-	top 20 items. Four queries in total, whatever the floor size."""
+	"""{slot: [level, ...]} for every Bin-role level under the given slots, each with per-UOM fill, weight,
+	bay type and its top 20 items. Five queries in total, whatever the floor size."""
 	if not slot_names:
 		return {}
 	levels = frappe.db.sql(
 		"""
-		SELECT w.name AS wh, w.warehouse_name AS label, w.parent_warehouse AS slot
+		SELECT w.name AS wh, w.warehouse_name AS label, w.parent_warehouse AS slot,
+		       w.wt_bay_type AS bay_type, w.wt_max_weight_kg AS max_kg, w.wt_area AS area,
+		       COALESCE(w.wt_weight_limit_action, 'Warn') AS limit_action
 		FROM `tabWarehouse` w
 		WHERE w.parent_warehouse IN %(slots)s
 		  AND w.wt_warehouse_type = 'Bin'
@@ -152,7 +209,7 @@ def _levels_by_slot(slot_names, allowed):
 		return {}
 	names = {"levels": tuple(lv.wh for lv in levels)}
 
-	stock, caps, items = {}, {}, {}
+	stock, caps, items, kg, item_count = {}, {}, {}, {}, {}
 	for r in frappe.db.sql(
 		"""
 		SELECT b.warehouse, i.stock_uom AS uom, SUM(b.actual_qty) AS qty, SUM(b.reserved_qty) AS reserved
@@ -177,10 +234,28 @@ def _levels_by_slot(slot_names, allowed):
 		caps.setdefault(r.parent, {})[r.uom] = _flt(r.capacity)
 	for r in frappe.db.sql(
 		"""
-		SELECT warehouse, c, n, u, g, a, r, rate, stock_value FROM (
+		SELECT b.warehouse, i.stock_uom, i.weight_per_unit, i.weight_uom, SUM(b.actual_qty) AS qty
+		FROM `tabBin` b
+		INNER JOIN `tabItem` i ON i.name = b.item_code
+		WHERE b.warehouse IN %(levels)s AND b.actual_qty != 0
+		GROUP BY b.warehouse, i.stock_uom, i.weight_per_unit, i.weight_uom
+	""",
+		names,
+		as_dict=True,
+	):
+		w = kg.setdefault(r.warehouse, {"kg": 0.0, "partial": False})
+		factor = kg_per_unit(r.stock_uom, r.weight_per_unit, r.weight_uom)
+		if factor is None:
+			w["partial"] = True  # some stock has no known weight
+		else:
+			w["kg"] += _flt(r.qty) * factor
+	for r in frappe.db.sql(
+		"""
+		SELECT warehouse, c, n, u, g, a, r, rate, stock_value, total FROM (
 			SELECT b.warehouse, b.item_code AS c, i.item_name AS n, i.stock_uom AS u, i.item_group AS g,
 			       b.actual_qty AS a, b.reserved_qty AS r, b.valuation_rate AS rate, b.stock_value,
-			       ROW_NUMBER() OVER (PARTITION BY b.warehouse ORDER BY b.actual_qty DESC) AS rn
+			       ROW_NUMBER() OVER (PARTITION BY b.warehouse ORDER BY b.actual_qty DESC) AS rn,
+			       COUNT(*) OVER (PARTITION BY b.warehouse) AS total
 			FROM `tabBin` b
 			INNER JOIN `tabItem` i ON i.name = b.item_code
 			WHERE b.warehouse IN %(levels)s AND b.actual_qty != 0
@@ -191,7 +266,9 @@ def _levels_by_slot(slot_names, allowed):
 		names,
 		as_dict=True,
 	):
-		items.setdefault(r.pop("warehouse"), []).append(r)
+		wh, total = r.pop("warehouse"), r.pop("total")
+		items.setdefault(wh, []).append(r)
+		item_count[wh] = total
 
 	by_slot = {}
 	for lv in levels:
@@ -202,8 +279,21 @@ def _levels_by_slot(slot_names, allowed):
 		]
 		stocked = {u["u"] for u in uoms}
 		uoms += [{"u": uom, "qty": 0, "reserved": 0, "cap": cap} for uom, cap in level_caps.items() if uom not in stocked]
+		weight = kg.get(lv.wh, {"kg": 0.0, "partial": False})
 		by_slot.setdefault(lv.slot, []).append(
-			{"wh": lv.wh, "label": lv.label, "uoms": uoms, "items": items.get(lv.wh, [])}
+			{
+				"wh": lv.wh,
+				"label": lv.label,
+				"uoms": uoms,
+				"items": items.get(lv.wh, []),
+				"item_count": item_count.get(lv.wh, 0),
+				"bay_type": lv.bay_type,
+				"max_kg": _flt(lv.max_kg),
+				"limit_action": lv.limit_action,
+				"kg": round(weight["kg"], 3),
+				"kg_partial": weight["partial"],
+				"area": _flt(lv.area),
+			}
 		)
 	return by_slot
 
@@ -290,6 +380,12 @@ def _set_uom_capacities(doc, rows):
 			doc.append("wt_uom_capacities", {"uom": row.get("uom"), "capacity": _flt(row.get("capacity"))})
 
 
+def _set_extra_fields(doc, data):
+	for field in EXTRA_FIELDS:
+		if field in data:
+			doc.set(field, data.get(field) or None)
+
+
 @frappe.whitelist()
 def get_uom_list():
 	"""UOM options for the WT UOM Capacities table in the warehouse form."""
@@ -303,9 +399,14 @@ def get_parent_warehouse_options(wt_warehouse_type, company=None):
 	Building's valid parent is the company's root warehouse (e.g. 'All Warehouses - ABBR')."""
 	_require_view_permission()
 
-	parent_role = {"Floor": "Building", "Slot": "Floor", "Bin": "Slot"}.get(wt_warehouse_type)
-	if parent_role:
-		filters = {"wt_warehouse_type": parent_role, "disabled": 0}
+	parent_roles = {
+		"Floor": ["Building"],
+		"Zone": ["Floor", "Zone"],
+		"Slot": ["Floor", "Zone"],
+		"Bin": ["Slot"],
+	}.get(wt_warehouse_type)
+	if parent_roles:
+		filters = {"wt_warehouse_type": ["in", parent_roles], "disabled": 0}
 	elif wt_warehouse_type == "Building":
 		filters = {"is_group": 1, "parent_warehouse": ["in", ["", None]]}
 	else:
@@ -360,6 +461,8 @@ def get_warehouse_detail(warehouse):
 		"uom_capacities": [
 			{"uom": r.uom, "capacity": r.capacity} for r in (doc.get("wt_uom_capacities") or [])
 		],
+		**{field: doc.get(field) for field in EXTRA_FIELDS},
+		"wt_area": doc.get("wt_area"),
 	}
 
 
@@ -374,7 +477,7 @@ def create_warehouse(data):
 		frappe.throw(_("Warehouse Name is required."))
 
 	wt_type = data.get("wt_warehouse_type")
-	if wt_type not in ("Building", "Floor", "Slot", "Bin"):
+	if wt_type not in ROLES:
 		frappe.throw(_("A valid Warehouse Type (3D) is required."))
 
 	is_group = data.get("is_group")
@@ -390,6 +493,7 @@ def create_warehouse(data):
 	doc.wt_col = _int(data.get("wt_col"))
 	doc.wt_row_gap = _flt(data.get("wt_row_gap"))
 	_set_uom_capacities(doc, data.get("uom_capacities"))
+	_set_extra_fields(doc, data)
 
 	doc.insert()  # enforces Warehouse "create" permission
 	return {"ok": True, "name": doc.name}
@@ -404,7 +508,7 @@ def update_warehouse(warehouse, data):
 
 	if (data.get("warehouse_name") or "").strip():
 		doc.warehouse_name = data["warehouse_name"].strip()
-	if data.get("wt_warehouse_type") in ("Building", "Floor", "Slot", "Bin"):
+	if data.get("wt_warehouse_type") in ROLES:
 		doc.wt_warehouse_type = data["wt_warehouse_type"]
 	if "parent_warehouse" in data:
 		doc.parent_warehouse = data.get("parent_warehouse") or None
@@ -423,6 +527,7 @@ def update_warehouse(warehouse, data):
 		doc.wt_row_gap = _flt(data.get("wt_row_gap"))
 	if "uom_capacities" in data:
 		_set_uom_capacities(doc, data.get("uom_capacities"))
+	_set_extra_fields(doc, data)
 
 	doc.save()
 	return {"ok": True, "name": doc.name}
@@ -476,3 +581,250 @@ def delete_warehouse(warehouse):
 			"This warehouse has transaction history, so it was disabled instead of permanently deleted."
 		),
 	}
+
+
+# ─────────────────────────────────────────────────────────────
+# SEARCH, ITEMS, PUTAWAY RULES, BAY SUGGESTION
+# ─────────────────────────────────────────────────────────────
+
+
+def _locate(warehouses):
+	"""{warehouse: {floor, floor_name, slot, slot_label, zone_path}} from the Warehouse tree (one query)."""
+	if not warehouses:
+		return {}
+	out = {wh: {"floor": None, "floor_name": None, "slot": None, "slot_label": None, "zone_path": []} for wh in warehouses}
+	for r in frappe.db.sql(
+		"""
+		SELECT h.name AS wh, a.name, a.warehouse_name, a.wt_warehouse_type AS role
+		FROM `tabWarehouse` h
+		JOIN `tabWarehouse` a ON a.lft <= h.lft AND a.rgt >= h.rgt
+		WHERE h.name IN %(whs)s AND a.wt_warehouse_type IN ('Floor', 'Zone', 'Slot')
+		ORDER BY a.lft
+	""",
+		{"whs": tuple(warehouses)},
+		as_dict=True,
+	):
+		loc = out[r.wh]
+		if r.role == "Floor":
+			loc.update(floor=r.name, floor_name=r.warehouse_name)
+		elif r.role == "Slot":
+			loc.update(slot=r.name, slot_label=r.warehouse_name)
+		else:
+			loc["zone_path"].append(r.warehouse_name)
+	return out
+
+
+@frappe.whitelist()
+def find_locations(query):
+	"""Where is it? Serial No, Batch or Item (code/name), across every floor the user may see."""
+	_require_view_permission()
+	q = (query or "").strip()
+	if len(q) < 2:
+		return []
+	like = f"%{q}%"
+	hits = []
+
+	if frappe.has_permission("Serial No", "read"):
+		for sn in frappe.get_list(
+			"Serial No",
+			filters={"name": ["like", like], "warehouse": ["is", "set"]},
+			fields=["name", "item_code", "warehouse"],
+			limit_page_length=20,
+		):
+			hits.append({"kind": "Serial No", "ref": sn.name, "item": sn.item_code, "warehouse": sn.warehouse, "qty": 1})
+
+	if frappe.has_permission("Batch", "read"):
+		from erpnext.stock.doctype.batch.batch import get_batch_qty
+
+		for batch in frappe.get_list("Batch", filters={"name": ["like", like]}, fields=["name", "item"], limit_page_length=10):
+			for row in get_batch_qty(batch_no=batch.name) or []:
+				if flt(row.get("qty")) > 0:
+					hits.append({"kind": "Batch", "ref": batch.name, "item": batch.item, "warehouse": row.get("warehouse"), "qty": flt(row.get("qty"))})
+
+	items = frappe.get_list(
+		"Item", or_filters={"name": ["like", like], "item_name": ["like", like]}, pluck="name", limit_page_length=20
+	)
+	if items:
+		for b in frappe.get_list(
+			"Bin",
+			filters={"item_code": ["in", items], "actual_qty": [">", 0]},
+			fields=["item_code", "warehouse", "actual_qty"],
+			limit_page_length=200,
+		):
+			hits.append({"kind": "Item", "ref": b.item_code, "item": b.item_code, "warehouse": b.warehouse, "qty": flt(b.actual_qty)})
+
+	allowed = _permitted_warehouses()
+	hits = [h for h in hits if h["warehouse"] in allowed]
+	where = _locate(list({h["warehouse"] for h in hits}))
+	for h in hits:
+		h.update(where.get(h["warehouse"], {}))
+	return hits
+
+
+@frappe.whitelist()
+def get_level_items(warehouse):
+	"""Every item in one level (the floor payload carries only the top 20)."""
+	_require_view_permission()
+	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
+	return frappe.db.sql(
+		"""
+		SELECT b.item_code AS c, i.item_name AS n, i.stock_uom AS u, i.item_group AS g,
+		       b.actual_qty AS a, b.reserved_qty AS r, b.valuation_rate AS rate, b.stock_value
+		FROM `tabBin` b
+		INNER JOIN `tabItem` i ON i.name = b.item_code
+		WHERE b.warehouse = %s AND b.actual_qty != 0
+		ORDER BY b.actual_qty DESC
+		LIMIT 2000
+	""",
+		(warehouse,),
+		as_dict=True,
+	)
+
+
+def _levels_under(warehouse):
+	"""Bin-role levels at or under `warehouse`, in floor order (slot row, col, level name)."""
+	bounds = _floor_bounds(warehouse)
+	return frappe.db.sql(
+		"""
+		SELECT lv.name, lv.warehouse_name AS label, lv.company, lv.wt_bay_type AS bay_type,
+		       lv.wt_max_weight_kg AS max_kg
+		FROM `tabWarehouse` lv
+		LEFT JOIN `tabWarehouse` sl ON sl.name = lv.parent_warehouse
+		WHERE lv.lft >= %(lft)s AND lv.rgt <= %(rgt)s
+		  AND lv.wt_warehouse_type = 'Bin' AND lv.disabled = 0 AND lv.is_group = 0
+		ORDER BY sl.wt_row, sl.wt_col, sl.warehouse_name, lv.warehouse_name
+	""",
+		bounds,
+		as_dict=True,
+	)
+
+
+def _capacities(levels):
+	caps = {}
+	for r in frappe.get_all(
+		"Warehouse UOM Capacity",
+		filters={"parenttype": "Warehouse", "parent": ["in", levels]},
+		fields=["parent", "uom", "capacity"],
+	):
+		caps.setdefault(r.parent, {})[r.uom] = flt(r.capacity)
+	return caps
+
+
+@frappe.whitelist(methods=["POST"])
+def sync_putaway_rules(warehouse, items=None):
+	"""Create or update ERPNext Putaway Rules from the WT UOM capacities of every level at or under
+	`warehouse`, so the capacity drawn in 3D is the one ERPNext uses to place stock.
+
+	items: JSON list of item codes; default = items currently stocked in those levels.
+	A level is used for an item only if it has a capacity in the item's stock UOM and a compatible bay type.
+	"""
+	_require_edit_permission()
+	frappe.has_permission("Putaway Rule", "create", throw=True)
+	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
+	levels = _levels_under(warehouse)
+	names = [lv.name for lv in levels]
+	if not names:
+		return {"created": 0, "updated": 0, "skipped": []}
+	caps = _capacities(names)
+
+	if isinstance(items, str):
+		items = json.loads(items)
+	if not items:
+		items = frappe.get_all("Bin", filters={"warehouse": ["in", names], "actual_qty": [">", 0]}, pluck="item_code", distinct=True)
+	item_info = {
+		i.name: i for i in frappe.get_all("Item", filters={"name": ["in", items]}, fields=["name", "stock_uom", "wt_bay_type"])
+	}
+
+	from erpnext.stock.utils import get_stock_balance
+
+	created, updated, skipped = 0, 0, []
+	for item_code in items:
+		info = item_info.get(item_code)
+		if not info:
+			skipped.append({"item": item_code, "reason": _("Item not found")})
+			continue
+		for priority, lv in enumerate(levels, start=1):
+			capacity = caps.get(lv.name, {}).get(info.stock_uom)
+			if not capacity:
+				continue
+			if info.wt_bay_type and lv.bay_type and info.wt_bay_type != lv.bay_type:
+				continue
+			if capacity < flt(get_stock_balance(item_code, lv.name)):
+				skipped.append({"item": item_code, "warehouse": lv.name, "reason": _("capacity is below current stock")})
+				continue
+			existing = frappe.db.exists("Putaway Rule", {"item_code": item_code, "warehouse": lv.name})
+			rule = frappe.get_doc("Putaway Rule", existing) if existing else frappe.new_doc("Putaway Rule")
+			rule.update(
+				{
+					"item_code": item_code,
+					"warehouse": lv.name,
+					"company": lv.company,
+					"capacity": capacity,
+					"uom": info.stock_uom,
+					"stock_uom": info.stock_uom,
+					"conversion_factor": 1,
+					# ERPNext checks stock_capacity before computing it (the form sets it client-side)
+					"stock_capacity": capacity,
+					"priority": priority,
+				}
+			)
+			rule.save()  # enforces Putaway Rule permissions and ERPNext's own validations
+			if existing:
+				updated += 1
+			else:
+				created += 1
+	return {"created": created, "updated": updated, "skipped": skipped}
+
+
+@frappe.whitelist()
+def suggest_free_bay(floor, item_code=None, qty=1):
+	"""First level on the floor (row, column, level order) that can take `qty` of the item:
+	room in its UOM capacity (or empty when it has none), a compatible bay type, and within its weight limit."""
+	_require_view_permission()
+	frappe.has_permission("Warehouse", "read", floor, throw=True)
+	qty = flt(qty) or 1
+	item = (
+		frappe.db.get_value(
+			"Item", item_code, ["stock_uom", "weight_per_unit", "weight_uom", "wt_bay_type"], as_dict=True
+		)
+		if item_code
+		else None
+	)
+	allowed = _permitted_warehouses()
+	levels = [lv for lv in _levels_under(floor) if lv.name in allowed]
+	if not levels:
+		return None
+	names = [lv.name for lv in levels]
+	caps = _capacities(names)
+	stock = {}
+	for b in frappe.db.sql(
+		"""
+		SELECT b.warehouse, i.stock_uom, i.weight_per_unit, i.weight_uom, SUM(b.actual_qty) AS qty
+		FROM `tabBin` b INNER JOIN `tabItem` i ON i.name = b.item_code
+		WHERE b.warehouse IN %(w)s AND b.actual_qty != 0
+		GROUP BY b.warehouse, i.stock_uom, i.weight_per_unit, i.weight_uom
+	""",
+		{"w": tuple(names)},
+		as_dict=True,
+	):
+		level = stock.setdefault(b.warehouse, {"by_uom": {}, "kg": 0.0, "any": False})
+		level["any"] = True
+		level["by_uom"][b.stock_uom] = level["by_uom"].get(b.stock_uom, 0) + flt(b.qty)
+		level["kg"] += flt(b.qty) * (kg_per_unit(b.stock_uom, b.weight_per_unit, b.weight_uom) or 0)
+
+	item_kg = qty * (kg_per_unit(item.stock_uom, item.weight_per_unit, item.weight_uom) or 0) if item else 0
+	for lv in levels:
+		held = stock.get(lv.name, {"by_uom": {}, "kg": 0.0, "any": False})
+		if item and item.wt_bay_type and lv.bay_type and item.wt_bay_type != lv.bay_type:
+			continue
+		level_caps = caps.get(lv.name, {})
+		if item and level_caps.get(item.stock_uom):
+			if held["by_uom"].get(item.stock_uom, 0) + qty > level_caps[item.stock_uom]:
+				continue
+		elif held["any"]:
+			continue  # no capacity defined for this UOM: only an empty level counts as free
+		if flt(lv.max_kg) and held["kg"] + item_kg > flt(lv.max_kg):
+			continue
+		return {"warehouse": lv.name, "label": lv.label}
+	return None
+
