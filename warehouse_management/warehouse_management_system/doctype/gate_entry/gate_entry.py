@@ -26,7 +26,11 @@ class GateEntry(Document):
 		if self.entry_type == "Out" and self.serial_no:
 			current = frappe.db.get_value("Serial No", self.serial_no, "warehouse")
 			if current != self.warehouse:
-				frappe.throw(_("Serial No {0} is in {1}, not {2}").format(self.serial_no, current or _("no warehouse"), self.warehouse))
+				frappe.throw(
+					_("Serial No {0} is in {1}, not {2}").format(
+						self.serial_no, current or _("no warehouse"), self.warehouse
+					)
+				)
 
 	def on_submit(self):
 		row = {
@@ -36,7 +40,11 @@ class GateEntry(Document):
 			"serial_no": self.serial_no,
 		}
 		if self.entry_type == "In":
-			row.update(t_warehouse=self.warehouse, basic_rate=flt(self.basic_rate), allow_zero_valuation_rate=self.allow_zero_valuation_rate)
+			row.update(
+				t_warehouse=self.warehouse,
+				basic_rate=flt(self.basic_rate),
+				allow_zero_valuation_rate=self.allow_zero_valuation_rate,
+			)
 		else:
 			row.update(s_warehouse=self.warehouse)
 		entry = frappe.get_doc(

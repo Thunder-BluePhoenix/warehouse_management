@@ -47,7 +47,10 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 	def _user(self, email, roles):
 		if not frappe.db.exists("User", email):
 			frappe.get_doc(
-				doctype="User", email=email, first_name="WM Test", send_welcome_email=0,
+				doctype="User",
+				email=email,
+				first_name="WM Test",
+				send_welcome_email=0,
 				roles=[{"role": r} for r in roles],
 			).insert(ignore_permissions=True)
 		return email
@@ -143,7 +146,10 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		roles = {2: "Building", 3: "Floor", 4: "Slot", 5: "Bin"}
 		setup_api.apply_depth_mapping([{"depth": d, "role": r} for d, r in roles.items()], self.company)
 		self.assertEqual(
-			[frappe.db.get_value("Warehouse", w.name, "wt_warehouse_type") for w in (building, floor, slot, level)],
+			[
+				frappe.db.get_value("Warehouse", w.name, "wt_warehouse_type")
+				for w in (building, floor, slot, level)
+			],
 			["Building", "Floor", "Slot", "Bin"],
 		)
 		self.assertGreaterEqual(setup_api.get_setup_summary().get("Bin", 0), 1)

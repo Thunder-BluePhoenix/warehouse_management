@@ -24,14 +24,18 @@ def can_edit():
 def _require_view_permission():
 	"""Raise PermissionError unless the user may read warehouses and their stock."""
 	if not can_view():
-		frappe.throw(_("You need read access to Warehouse and Bin to view Warehouse 3D."), frappe.PermissionError)
+		frappe.throw(
+			_("You need read access to Warehouse and Bin to view Warehouse 3D."), frappe.PermissionError
+		)
 
 
 def _require_edit_permission():
 	"""Raise PermissionError unless the user may change warehouses."""
 	if not can_edit():
 		frappe.throw(
-			_("You need write access to Warehouse to edit floor plans, slot configuration or UOM capacities."),
+			_(
+				"You need write access to Warehouse to edit floor plans, slot configuration or UOM capacities."
+			),
 			frappe.PermissionError,
 		)
 
@@ -173,7 +177,7 @@ def get_slots(group_warehouse):
 		as_dict=True,
 	)
 	for sl in slots:
-		# ponytail: slots × zones scan in Python; fine for thousands of each
+		# ponytail: slots x zones scan in Python; fine for thousands of each
 		sl["zone_path"] = [z.label for z in zones if z.lft < sl.lft and z.rgt > sl.rgt]
 		del sl["lft"], sl["rgt"]
 	slots = [sl for sl in slots if sl["wh"] in allowed]
@@ -278,7 +282,11 @@ def _levels_by_slot(slot_names, allowed):
 			for b in stock.get(lv.wh, [])
 		]
 		stocked = {u["u"] for u in uoms}
-		uoms += [{"u": uom, "qty": 0, "reserved": 0, "cap": cap} for uom, cap in level_caps.items() if uom not in stocked]
+		uoms += [
+			{"u": uom, "qty": 0, "reserved": 0, "cap": cap}
+			for uom, cap in level_caps.items()
+			if uom not in stocked
+		]
 		weight = kg.get(lv.wh, {"kg": 0.0, "partial": False})
 		by_slot.setdefault(lv.slot, []).append(
 			{
@@ -592,7 +600,10 @@ def _locate(warehouses):
 	"""{warehouse: {floor, floor_name, slot, slot_label, zone_path}} from the Warehouse tree (one query)."""
 	if not warehouses:
 		return {}
-	out = {wh: {"floor": None, "floor_name": None, "slot": None, "slot_label": None, "zone_path": []} for wh in warehouses}
+	out = {
+		wh: {"floor": None, "floor_name": None, "slot": None, "slot_label": None, "zone_path": []}
+		for wh in warehouses
+	}
 	for r in frappe.db.sql(
 		"""
 		SELECT h.name AS wh, a.name, a.warehouse_name, a.wt_warehouse_type AS role
@@ -631,18 +642,39 @@ def find_locations(query):
 			fields=["name", "item_code", "warehouse"],
 			limit_page_length=20,
 		):
-			hits.append({"kind": "Serial No", "ref": sn.name, "item": sn.item_code, "warehouse": sn.warehouse, "qty": 1})
+			hits.append(
+				{
+					"kind": "Serial No",
+					"ref": sn.name,
+					"item": sn.item_code,
+					"warehouse": sn.warehouse,
+					"qty": 1,
+				}
+			)
 
 	if frappe.has_permission("Batch", "read"):
 		from erpnext.stock.doctype.batch.batch import get_batch_qty
 
-		for batch in frappe.get_list("Batch", filters={"name": ["like", like]}, fields=["name", "item"], limit_page_length=10):
+		for batch in frappe.get_list(
+			"Batch", filters={"name": ["like", like]}, fields=["name", "item"], limit_page_length=10
+		):
 			for row in get_batch_qty(batch_no=batch.name) or []:
 				if flt(row.get("qty")) > 0:
-					hits.append({"kind": "Batch", "ref": batch.name, "item": batch.item, "warehouse": row.get("warehouse"), "qty": flt(row.get("qty"))})
+					hits.append(
+						{
+							"kind": "Batch",
+							"ref": batch.name,
+							"item": batch.item,
+							"warehouse": row.get("warehouse"),
+							"qty": flt(row.get("qty")),
+						}
+					)
 
 	items = frappe.get_list(
-		"Item", or_filters={"name": ["like", like], "item_name": ["like", like]}, pluck="name", limit_page_length=20
+		"Item",
+		or_filters={"name": ["like", like], "item_name": ["like", like]},
+		pluck="name",
+		limit_page_length=20,
 	)
 	if items:
 		for b in frappe.get_list(
@@ -651,7 +683,15 @@ def find_locations(query):
 			fields=["item_code", "warehouse", "actual_qty"],
 			limit_page_length=200,
 		):
-			hits.append({"kind": "Item", "ref": b.item_code, "item": b.item_code, "warehouse": b.warehouse, "qty": flt(b.actual_qty)})
+			hits.append(
+				{
+					"kind": "Item",
+					"ref": b.item_code,
+					"item": b.item_code,
+					"warehouse": b.warehouse,
+					"qty": flt(b.actual_qty),
+				}
+			)
 
 	allowed = _permitted_warehouses()
 	hits = [h for h in hits if h["warehouse"] in allowed]
@@ -730,9 +770,17 @@ def sync_putaway_rules(warehouse, items=None):
 	if isinstance(items, str):
 		items = json.loads(items)
 	if not items:
-		items = frappe.get_all("Bin", filters={"warehouse": ["in", names], "actual_qty": [">", 0]}, pluck="item_code", distinct=True)
+		items = frappe.get_all(
+			"Bin",
+			filters={"warehouse": ["in", names], "actual_qty": [">", 0]},
+			pluck="item_code",
+			distinct=True,
+		)
 	item_info = {
-		i.name: i for i in frappe.get_all("Item", filters={"name": ["in", items]}, fields=["name", "stock_uom", "wt_bay_type"])
+		i.name: i
+		for i in frappe.get_all(
+			"Item", filters={"name": ["in", items]}, fields=["name", "stock_uom", "wt_bay_type"]
+		)
 	}
 
 	from erpnext.stock.utils import get_stock_balance
@@ -750,7 +798,9 @@ def sync_putaway_rules(warehouse, items=None):
 			if info.wt_bay_type and lv.bay_type and info.wt_bay_type != lv.bay_type:
 				continue
 			if capacity < flt(get_stock_balance(item_code, lv.name)):
-				skipped.append({"item": item_code, "warehouse": lv.name, "reason": _("capacity is below current stock")})
+				skipped.append(
+					{"item": item_code, "warehouse": lv.name, "reason": _("capacity is below current stock")}
+				)
 				continue
 			existing = frappe.db.exists("Putaway Rule", {"item_code": item_code, "warehouse": lv.name})
 			rule = frappe.get_doc("Putaway Rule", existing) if existing else frappe.new_doc("Putaway Rule")
@@ -827,4 +877,3 @@ def suggest_free_bay(floor, item_code=None, qty=1):
 			continue
 		return {"warehouse": lv.name, "label": lv.label}
 	return None
-

@@ -44,8 +44,13 @@ class TestWarehouseFeatures(IntegrationTestCase):
 	def item(self, code, **kw):
 		if not frappe.db.exists("Item", code):
 			frappe.get_doc(
-				doctype="Item", item_code=code, item_group="All Item Groups", stock_uom=kw.pop("stock_uom", "Nos"),
-				is_stock_item=1, gst_hsn_code=HSN, **kw,
+				doctype="Item",
+				item_code=code,
+				item_group="All Item Groups",
+				stock_uom=kw.pop("stock_uom", "Nos"),
+				is_stock_item=1,
+				gst_hsn_code=HSN,
+				**kw,
 			).insert()
 		return code
 
@@ -68,7 +73,7 @@ class TestWarehouseFeatures(IntegrationTestCase):
 		zone = self.wh("_WF Zone A", "Zone", floor.name)
 		rack = self.wh("_WF Rack 01", "Zone", zone.name)
 		deep = self.wh("_WF Z Deep", "Slot", rack.name)
-		direct = self.wh("_WF Z Direct", "Slot", floor.name)
+		self.wh("_WF Z Direct", "Slot", floor.name)
 		self.wh("_WF Z L", "Bin", deep.name, is_group=0)
 
 		slots = {s["label"]: s for s in api.get_slots(floor.name)}
@@ -137,7 +142,12 @@ class TestWarehouseFeatures(IntegrationTestCase):
 	def test_full_item_list_beyond_top_twenty(self):
 		floor, _slot, (level, _other) = self.floor_with_levels("_WF Many")
 		for i in range(22):
-			frappe.get_doc(doctype="Bin", item_code=self.item(f"_WF Many {i:02d}"), warehouse=level.name, actual_qty=i + 1).insert()
+			frappe.get_doc(
+				doctype="Bin",
+				item_code=self.item(f"_WF Many {i:02d}"),
+				warehouse=level.name,
+				actual_qty=i + 1,
+			).insert()
 		payload = api.get_slots(floor.name)[0]["levels"][0]
 		self.assertEqual((len(payload["items"]), payload["item_count"]), (20, 22))
 		self.assertEqual(len(api.get_level_items(level.name)), 22)
@@ -152,7 +162,9 @@ class TestWarehouseFeatures(IntegrationTestCase):
 
 		first = api.sync_putaway_rules(slot.name)
 		self.assertEqual((first["created"], first["updated"]), (1, 0))
-		self.assertEqual(frappe.db.get_value("Putaway Rule", {"item_code": part, "warehouse": level.name}, "capacity"), 10)
+		self.assertEqual(
+			frappe.db.get_value("Putaway Rule", {"item_code": part, "warehouse": level.name}, "capacity"), 10
+		)
 		api.save_uom_capacity(other.name, "Nos", 5)
 		second = api.sync_putaway_rules(slot.name)
 		self.assertEqual((second["created"], second["updated"]), (1, 1))
@@ -178,15 +190,25 @@ class TestWarehouseFeatures(IntegrationTestCase):
 		vehicle = self.item("_WF Gate Vehicle", has_serial_no=1)
 
 		gate_in = frappe.get_doc(
-			doctype="Gate Entry", entry_type="In", company=self.company, item_code=vehicle, serial_no="_WF-GATE-01",
-			warehouse=level.name, allow_zero_valuation_rate=1, reference_no="DL1AB1234",
+			doctype="Gate Entry",
+			entry_type="In",
+			company=self.company,
+			item_code=vehicle,
+			serial_no="_WF-GATE-01",
+			warehouse=level.name,
+			allow_zero_valuation_rate=1,
+			reference_no="DL1AB1234",
 		).insert()
 		gate_in.submit()
 		self.assertEqual(frappe.db.get_value("Stock Entry", gate_in.stock_entry, "docstatus"), 1)
 		self.assertEqual(frappe.db.get_value("Serial No", "_WF-GATE-01", "warehouse"), level.name)
 
 		gate_out = frappe.get_doc(
-			doctype="Gate Entry", entry_type="Out", company=self.company, item_code=vehicle, serial_no="_WF-GATE-01"
+			doctype="Gate Entry",
+			entry_type="Out",
+			company=self.company,
+			item_code=vehicle,
+			serial_no="_WF-GATE-01",
 		).insert()
 		self.assertEqual(gate_out.warehouse, level.name)  # taken from the serial
 		gate_out.submit()

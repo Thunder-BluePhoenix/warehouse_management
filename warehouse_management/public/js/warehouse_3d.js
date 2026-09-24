@@ -1726,7 +1726,7 @@ const actions = {
     store.fpDragIdx = ri;
     if (ev?.dataTransfer) {
       ev.dataTransfer.effectAllowed = 'move';
-      try { ev.dataTransfer.setData('text/plain', String(ri)); } catch(e){}
+      try { ev.dataTransfer.setData('text/plain', String(ri)); } catch(e){ /* some browsers refuse setData; the drag still works */ }
     }
   },
   fpRowDragOver(ri) {
