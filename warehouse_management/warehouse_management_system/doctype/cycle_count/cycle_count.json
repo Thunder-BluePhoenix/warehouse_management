@@ -1,0 +1,181 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-25 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "location",
+  "column_break_status",
+  "status",
+  "counted_by",
+  "counted_at",
+  "approved_by",
+  "items_section",
+  "items",
+  "result_section",
+  "stock_reconciliation",
+  "remarks",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "options": "Company",
+   "label": "Company",
+   "reqd": 1,
+   "remember_last_selected_value": 1
+  },
+  {
+   "fieldname": "location",
+   "fieldtype": "Link",
+   "options": "Warehouse",
+   "label": "Location",
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Everything at or under this warehouse is counted (a floor, zone, slot or single level), totes included."
+  },
+  {
+   "fieldname": "column_break_status",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Counting\nPending Approval\nApproved\nCancelled",
+   "default": "Counting",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "counted_by",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Counted By",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "counted_at",
+   "fieldtype": "Datetime",
+   "label": "Counted At",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "Approved By",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Count"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "options": "Cycle Count Item",
+   "label": "Items"
+  },
+  {
+   "fieldname": "result_section",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "stock_reconciliation",
+   "fieldtype": "Link",
+   "options": "Stock Reconciliation",
+   "label": "Stock Reconciliation",
+   "read_only": 1,
+   "no_copy": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "options": "Cycle Count",
+   "label": "Amended From",
+   "read_only": 1,
+   "no_copy": 1,
+   "print_hide": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-25 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Warehouse Management System",
+ "name": "Cycle Count",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "CCT-.YYYY.-.#####",
+ "naming_rule": "Expression (old style)",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "permissions": [
+  {
+   "read": 1,
+   "role": "Stock User",
+   "permlevel": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "read": 1,
+   "role": "Stock Manager",
+   "permlevel": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "read": 1,
+   "role": "Stock Manager",
+   "permlevel": 1
+  },
+  {
+   "read": 1,
+   "role": "System Manager",
+   "permlevel": 0,
+   "report": 1,
+   "export": 1,
+   "print": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "read": 1,
+   "role": "System Manager",
+   "permlevel": 1
+  }
+ ]
+}

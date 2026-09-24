@@ -55,6 +55,15 @@ fixtures = [
 # include js in doctype views
 # doctype_js = {"doctype" : "public/js/doctype.js"}
 doctype_js = {"Warehouse": "public/js/warehouse.js"}
+
+# Jinja helpers for the WMS label print formats
+jinja = {
+	"methods": [
+		"warehouse_management.labels.wm_qr_svg",
+		"warehouse_management.labels.wm_location_path",
+		"warehouse_management.labels.wm_label_size",
+	]
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -165,6 +174,8 @@ doctype_js = {"Warehouse": "public/js/warehouse.js"}
 
 # Scheduled Tasks
 # ---------------
+
+scheduler_events = {"cron": {"* * * * *": ["warehouse_management.holds.expire_holds"]}}
 
 # scheduler_events = {
 # 	"all": [

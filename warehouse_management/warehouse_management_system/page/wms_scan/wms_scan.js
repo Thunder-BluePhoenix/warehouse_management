@@ -1,4 +1,4 @@
-/* WMS Scan: put away, move totes and pick by scanning. Works with a hardware scanner (types the code and
+/* WMS Scan: put away, move totes, pick and count by scanning. Works with a hardware scanner (types the code and
    presses Enter) or the phone camera (the scan icon in the input). All the rules run on the server. */
 frappe.pages["wms-scan"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -33,6 +33,7 @@ class WmsScan {
 				{ value: "putaway", label: __("Put away") },
 				{ value: "move", label: __("Move tote") },
 				{ value: "pick", label: __("Pick") },
+				{ value: "count", label: __("Count") },
 			],
 			default: "putaway",
 			change: () => this.set_mode(this.mode_field.get_value()),
@@ -51,6 +52,14 @@ class WmsScan {
 			label: __("Pick List"),
 			get_query: () => ({ filters: { docstatus: 0 } }),
 			change: () => this.load_pick(),
+		});
+		this.count_field = page.add_field({
+			fieldname: "cycle_count",
+			fieldtype: "Link",
+			options: "Cycle Count",
+			label: __("Cycle Count"),
+			get_query: () => ({ filters: { docstatus: 0, status: "Counting" } }),
+			change: () => this.load_count(),
 		});
 
 		this.code = frappe.ui.form.make_control({
@@ -94,6 +103,7 @@ class WmsScan {
 		this.tote = null; // move: the scanned tote
 		this.at = null; // pick: the level or tote the picker is standing at
 		this.pick = null; // pick: rows from the server
+		this.count = null; // count: rows as a counter sees them (no expected quantities)
 	}
 
 	set_mode(mode) {
@@ -101,12 +111,15 @@ class WmsScan {
 		this.reset();
 		this.source_field.$wrapper.toggle(mode === "putaway");
 		this.pick_field.$wrapper.toggle(mode === "pick");
+		this.count_field.$wrapper.toggle(mode === "count");
 		this.page.clear_primary_action();
 		if (mode === "putaway") {
 			this.page.set_primary_action(__("Post"), () => this.post_putaway());
 		} else if (mode === "pick") {
 			this.page.set_primary_action(__("Finish Pick"), () => this.finish_pick());
 			this.load_pick();
+		} else if (mode === "count") {
+			this.load_count();
 		}
 		this.render();
 	}
@@ -281,6 +294,46 @@ class WmsScan {
 		});
 	}
 
+	// ── count ──────────────────────────────────────────
+	async load_count() {
+		const name = this.count_field.get_value();
+		this.count = null;
+		if (name) {
+			const r = await frappe.call({
+				method: WMS_API + "get_count",
+				args: { cycle_count: name },
+			});
+			this.count = r.message;
+		}
+		this.render();
+		this.focus();
+	}
+
+	async on_count(s) {
+		if (!this.count) return this.fail(__("Choose the Cycle Count first."));
+		if (s.kind === "location" || s.kind === "tote") {
+			this.at = s;
+			return;
+		}
+		if (!this.at) return this.fail(__("Scan the location or tote first."));
+		await frappe.call({
+			method: WMS_API + "record_count",
+			args: {
+				cycle_count: this.count.name,
+				code: s.code,
+				warehouse: this.at.warehouse,
+				qty: this.qty.get_value() || 1,
+			},
+		});
+		frappe.utils.play_sound("click");
+		this.qty.set_value(1);
+		const r = await frappe.call({
+			method: WMS_API + "get_count",
+			args: { cycle_count: this.count.name },
+		});
+		this.count = r.message;
+	}
+
 	// ── view ───────────────────────────────────────────
 	render() {
 		const esc = frappe.utils.escape_html;
@@ -312,6 +365,23 @@ class WmsScan {
 						esc(this.tote.location || __("nowhere")),
 				  ])
 				: __("Scan a tote");
+		} else if (this.mode === "count") {
+			if (!this.count) {
+				prompt = __("Choose a Cycle Count");
+			} else {
+				prompt = this.at
+					? __("At {0}: scan what is there", [`<b>${esc(this.at.label)}</b>`])
+					: __("Scan a location or tote, then everything on it");
+				list = this.count.rows
+					.map(
+						(r) => `<div class="wms-row ${r.counted ? "done" : ""}">
+						<div><b>${esc(r.item_code)}</b>${r.batch_no ? " · " + esc(r.batch_no) : ""}
+						<div class="text-muted">${esc(r.warehouse)}</div></div>
+						<div class="wms-count">${r.counted ? r.counted_qty : "—"}</div>
+					</div>`
+					)
+					.join("");
+			}
 		} else if (this.pick) {
 			const next = this.pick.rows.find((r) => r.picked < r.qty);
 			prompt = this.at

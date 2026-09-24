@@ -441,3 +441,68 @@ def _tell_customers(pick, short):
 			)
 			notified.append({"sales_order": sales_order, "email": order.contact_email})
 	return notified
+
+
+# ── cycle count ────────────────────────────────────────────
+
+
+@frappe.whitelist(methods=["POST"])
+def record_count(cycle_count: str, code: str, warehouse: str, qty: float = 1):
+	"""One scan while counting, at the scanned level or tote (`warehouse`). Unexpected items get a new row.
+	Returns only what was counted: expected quantities stay hidden from counters."""
+	doc = frappe.get_doc("Cycle Count", cycle_count)
+	doc.check_permission("write")
+	if doc.docstatus != 0 or doc.status != "Counting":
+		frappe.throw(_("Cycle Count {0} is not being counted.").format(cycle_count))
+	if not warehouse:
+		frappe.throw(_("Scan the location or tote first."))
+	scanned = resolve(code)
+	if scanned["kind"] not in ("item", "serial", "batch"):
+		frappe.throw(_("Scan an item, serial no or batch."))
+
+	batch = scanned.get("batch_no")
+	row = next(
+		(
+			r
+			for r in doc.items
+			if r.warehouse == warehouse
+			and r.item_code == scanned["item_code"]
+			and (r.batch_no or None) == batch
+		),
+		None,
+	)
+	if not row:
+		row = doc.append(
+			"items", {"warehouse": warehouse, "item_code": scanned["item_code"], "batch_no": batch}
+		)
+	if scanned["kind"] == "serial":
+		serials = [s for s in (row.counted_serials or "").splitlines() if s.strip()]
+		if scanned["serial_no"] in serials:
+			frappe.throw(_("Serial No {0} is already counted here.").format(scanned["serial_no"]))
+		row.counted_serials = "\n".join([*serials, scanned["serial_no"]])
+	else:
+		row.counted_qty = flt(row.counted_qty) + (flt(qty) or 1)
+	row.counted = 1
+	doc.save()
+	return {"item_code": row.item_code, "warehouse": row.warehouse, "counted": row.counted_qty}
+
+
+@frappe.whitelist()
+def get_count(cycle_count: str):
+	"""Rows as a counter sees them (no expected quantities)."""
+	doc = frappe.get_doc("Cycle Count", cycle_count)
+	doc.check_permission("read")
+	return {
+		"name": doc.name,
+		"status": doc.status,
+		"rows": [
+			{
+				"warehouse": r.warehouse,
+				"item_code": r.item_code,
+				"batch_no": r.batch_no,
+				"counted": r.counted,
+				"counted_qty": r.counted_qty,
+			}
+			for r in doc.items
+		],
+	}

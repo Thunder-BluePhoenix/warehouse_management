@@ -1,0 +1,119 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-25 20:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "warehouse",
+  "item_code",
+  "batch_no",
+  "uom",
+  "column_break_count",
+  "counted_qty",
+  "counted",
+  "counted_serials",
+  "expected_section",
+  "expected_qty",
+  "variance",
+  "expected_serials"
+ ],
+ "fields": [
+  {
+   "fieldname": "warehouse",
+   "fieldtype": "Link",
+   "options": "Warehouse",
+   "label": "Warehouse",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "item_code",
+   "fieldtype": "Link",
+   "options": "Item",
+   "label": "Item",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "batch_no",
+   "fieldtype": "Link",
+   "options": "Batch",
+   "label": "Batch",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "uom",
+   "fieldtype": "Link",
+   "options": "UOM",
+   "label": "UOM",
+   "read_only": 1,
+   "fetch_from": "item_code.stock_uom"
+  },
+  {
+   "fieldname": "column_break_count",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "counted_qty",
+   "fieldtype": "Float",
+   "label": "Counted Qty",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "counted",
+   "fieldtype": "Check",
+   "label": "Counted",
+   "in_list_view": 1,
+   "description": "Set when the row is counted (a zero count too), so an uncounted row is never taken as zero."
+  },
+  {
+   "fieldname": "counted_serials",
+   "fieldtype": "Small Text",
+   "label": "Counted Serial Nos"
+  },
+  {
+   "fieldname": "expected_section",
+   "fieldtype": "Section Break",
+   "label": "Expected (approvers only)"
+  },
+  {
+   "fieldname": "expected_qty",
+   "fieldtype": "Float",
+   "label": "Expected Qty",
+   "read_only": 1,
+   "permlevel": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "variance",
+   "fieldtype": "Float",
+   "label": "Variance",
+   "read_only": 1,
+   "permlevel": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expected_serials",
+   "fieldtype": "Small Text",
+   "label": "Expected Serial Nos",
+   "read_only": 1,
+   "permlevel": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-25 20:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Warehouse Management System",
+ "name": "Cycle Count Item",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1,
+ "track_changes": 0
+}

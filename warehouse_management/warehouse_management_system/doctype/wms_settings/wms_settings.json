@@ -12,7 +12,13 @@
   "putaway_section",
   "default_putaway_source",
   "picking_section",
-  "notify_customer_on_short_pick"
+  "notify_customer_on_short_pick",
+  "holds_section",
+  "hold_minutes",
+  "labels_section",
+  "label_width_mm",
+  "column_break_labels",
+  "label_height_mm"
  ],
  "fields": [
   {
@@ -61,11 +67,45 @@
    "default": "1",
    "label": "Email Customer on Short Pick",
    "description": "When a pick finishes short, email the Sales Order contact what ships now and what is back-ordered."
+  },
+  {
+   "fieldname": "holds_section",
+   "fieldtype": "Section Break",
+   "label": "Sales Holds"
+  },
+  {
+   "fieldname": "hold_minutes",
+   "fieldtype": "Int",
+   "default": "5",
+   "label": "Hold Minutes",
+   "description": "How long a Stock Hold (e.g. a web cart) keeps stock before it lapses."
+  },
+  {
+   "fieldname": "labels_section",
+   "fieldtype": "Section Break",
+   "label": "Labels"
+  },
+  {
+   "fieldname": "label_width_mm",
+   "fieldtype": "Float",
+   "default": "100",
+   "label": "Label Width (mm)",
+   "description": "Page size of the WMS Location Label and WMS Tote Label print formats (one label per page)."
+  },
+  {
+   "fieldname": "column_break_labels",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "label_height_mm",
+   "fieldtype": "Float",
+   "default": "50",
+   "label": "Label Height (mm)"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-25 18:00:00.000000",
+ "modified": "2026-09-25 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Warehouse Management System",
  "name": "WMS Settings",
