@@ -21,13 +21,22 @@ A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on
 - **Put away**: scan the item, then a level or tote. It suggests a place from Putaway Rules or where the item already is, and posts one Material Transfer.
 - **Move tote**: scan the tote, then its new location.
 - **Pick**: work through an ERPNext Pick List in walking order. Finishing ships what was picked, drafts the Delivery Note, and tells the customer by comment and email what is not in this shipment.
+- **Count**: scan a location or tote, then everything on it, for a Cycle Count.
+
+**Cycle Count.** Count a floor, zone, slot or single level (totes included). The count is blind: counters never see expected quantities (they are at permission level 1, which only Stock Manager reads). *Send for Approval* re-reads the stock at that moment; someone other than the counter approves, and approval posts one Stock Reconciliation, dated at the count, for the rows that differ.
+
+**Stock Hold.** A short hold on stock for a sales channel, such as a web cart (5 minutes by default, in WMS Settings). Holds lower the *available* quantity, so two carts cannot take the same last units, and they lapse on their own. API in `warehouse_management.holds`: `create_hold`, `extend_hold`, `release_hold` (one hold or a whole cart), `convert_hold` (when the order is placed), `get_available_qty`. Available = in stock − reserved for open sales orders − active holds. ERPNext's own stock documents do not check holds.
+
+**Labels.** Print formats *WMS Location Label* (Warehouse) and *WMS Tote Label* (Storage Bin): a QR code with exactly what WMS Scan reads, the name and the location path. Select levels or totes in the list, then Print; one label per page, size in WMS Settings (100 × 50 mm by default).
+
+**Stock by Facility** (report). Stock per item in each Building, with totals for in stock, reserved, on hold and available. Moving stock between facilities is a standard Material Transfer, or an inter-company Delivery Note and Purchase Receipt when the GSTINs differ.
 
 **Also:**
 - Floor areas with length × breadth and a computed area. **Split Area** (on the Warehouse form or in 3D) carves out a new area beside an existing one and moves stock into it.
 - **Putaway Rule sync** from level capacities.
 - **Gate Entry**: a generic In/Out register that posts a Material Receipt or Issue, with *Suggest Free Bay*.
 
-**Not in this app:** packing (use ERPNext's Packing Slip) and label printing.
+**Not in this app:** packing (use ERPNext's Packing Slip).
 
 Access follows ERPNext permissions: viewing needs read on **Warehouse** and ERPNext's **Bin** (stock balances); editing needs write on **Warehouse** (Item Manager by default). Adjust in Role Permission Manager.
 
