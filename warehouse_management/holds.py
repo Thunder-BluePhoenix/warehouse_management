@@ -48,10 +48,17 @@ def get_available_qty(item_code: str, warehouse: str | None = None, company: str
 	filters = {"item_code": item_code}
 	if warehouse:
 		filters["warehouse"] = warehouse
-	bins = frappe.get_all("Bin", filters=filters, fields=["warehouse", "actual_qty", "reserved_qty"])
-	if company:
-		in_company = set(frappe.get_all("Warehouse", filters={"company": company}, pluck="name"))
-		bins = [b for b in bins if b.warehouse in in_company]
+	# only warehouses the user may see: one entity's channel must not learn another entity's stock
+	visible = set(
+		frappe.get_list(
+			"Warehouse", filters={"company": company} if company else {}, pluck="name", limit_page_length=0
+		)
+	)
+	bins = [
+		b
+		for b in frappe.get_all("Bin", filters=filters, fields=["warehouse", "actual_qty", "reserved_qty"])
+		if b.warehouse in visible
+	]
 	held = _active_holds(item_code, [b.warehouse for b in bins] or [""])
 	per_warehouse = {
 		b.warehouse: flt(b.actual_qty) - flt(b.reserved_qty) - held.get(b.warehouse, 0) for b in bins

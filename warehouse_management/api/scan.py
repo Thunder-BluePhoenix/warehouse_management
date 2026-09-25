@@ -506,3 +506,118 @@ def get_count(cycle_count: str):
 			for r in doc.items
 		],
 	}
+
+
+# ── packing ────────────────────────────────────────────────
+
+
+def _draft_delivery_note(delivery_note, ptype="read"):
+	note = frappe.get_doc("Delivery Note", delivery_note)
+	note.check_permission(ptype)
+	if note.docstatus != 0:
+		frappe.throw(
+			_("Delivery Note {0} is already submitted; packing is done before it ships.").format(
+				delivery_note
+			)
+		)
+	return note
+
+
+def _open_package(delivery_note):
+	"""The package being filled: a draft Packing Slip for this Delivery Note."""
+	name = frappe.db.get_value(
+		"Packing Slip", {"delivery_note": delivery_note, "docstatus": 0}, "name", order_by="creation desc"
+	)
+	return frappe.get_doc("Packing Slip", name) if name else None
+
+
+@frappe.whitelist()
+def get_pack(delivery_note: str):
+	"""Lines still to pack (ordered, packed in closed packages, in the open package) and the open package."""
+	note = _draft_delivery_note(delivery_note)
+	package = _open_package(delivery_note)
+	in_package = {}
+	for row in package.items if package else []:
+		in_package[row.dn_detail] = in_package.get(row.dn_detail, 0) + flt(row.qty)
+	return {
+		"name": note.name,
+		"customer": note.customer,
+		"package": package.from_case_no if package else None,
+		"rows": [
+			{
+				"item_code": r.item_code,
+				"item_name": r.item_name,
+				"batch_no": r.batch_no,
+				"qty": flt(r.qty),
+				"packed": flt(r.packed_qty),
+				"in_package": in_package.get(r.name, 0),
+				"uom": r.uom,
+			}
+			for r in note.items
+		],
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def pack_scan(delivery_note: str, code: str, qty: float = 1):
+	"""Put one scanned item (or batch/serial) into the open package, starting a new package if none is open."""
+	note = _draft_delivery_note(delivery_note)
+	scanned = resolve(code)
+	if scanned["kind"] not in ("item", "serial", "batch"):
+		frappe.throw(_("Scan the item, serial no or batch you are packing."))
+	qty = 1 if scanned["kind"] == "serial" else (flt(qty) or 1)
+
+	package = _open_package(delivery_note)
+	if not package:
+		package = frappe.new_doc("Packing Slip")
+		package.delivery_note = delivery_note
+		package.from_case_no = package.get_recommended_case_no()
+	in_package = {}
+	for row in package.items:
+		in_package[row.dn_detail] = in_package.get(row.dn_detail, 0) + flt(row.qty)
+
+	line = next(
+		(
+			r
+			for r in note.items
+			if r.item_code == scanned["item_code"]
+			and (not scanned.get("batch_no") or r.batch_no == scanned["batch_no"])
+			and flt(r.qty) - flt(r.packed_qty) - in_package.get(r.name, 0) >= qty
+		),
+		None,
+	)
+	if not line:
+		frappe.throw(
+			_("{0} is not on this delivery, or is already packed.").format(frappe.bold(scanned["code"])),
+			title=_("Not to pack"),
+		)
+	row = next((r for r in package.items if r.dn_detail == line.name), None)
+	if row:
+		row.qty = flt(row.qty) + qty
+	else:
+		package.append(
+			"items",
+			{
+				"item_code": line.item_code,
+				"item_name": line.item_name,
+				"batch_no": line.batch_no,
+				"qty": qty,
+				"stock_uom": line.stock_uom,
+				"dn_detail": line.name,
+			},
+		)
+	package.save()  # Packing Slip permissions; ERPNext checks the quantities against the Delivery Note
+	return {"package": package.from_case_no, "packing_slip": package.name}
+
+
+@frappe.whitelist(methods=["POST"])
+def close_package(delivery_note: str, gross_weight: float = 0):
+	"""Seal the open package (submit its Packing Slip); the next scan starts the next package."""
+	_draft_delivery_note(delivery_note)
+	package = _open_package(delivery_note)
+	if not package or not package.items:
+		frappe.throw(_("There is no open package with items in it."))
+	if flt(gross_weight):
+		package.gross_weight_pkg = flt(gross_weight)
+	package.submit()
+	return {"package": package.from_case_no, "packing_slip": package.name}

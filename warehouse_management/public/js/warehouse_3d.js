@@ -115,6 +115,9 @@ const CSS = `
 #wt-search-wrap{position:relative;pointer-events:all;flex:1;max-width:280px}
 #wt-mob-menu{display:none;width:30px;height:30px;border-radius:7px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);cursor:pointer;align-items:center;justify-content:center;font-size:14px;pointer-events:all;flex-shrink:0}
 #wt-app.light #wt-mob-menu{border-color:rgba(0,0,0,.12);background:rgba(0,0,0,.05)}
+#wt-desk-link{height:28px;padding:0 10px;border-radius:7px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:var(--wt-text);font-size:12px;font-weight:600;display:flex;align-items:center;text-decoration:none;white-space:nowrap;pointer-events:all;flex-shrink:0}
+#wt-desk-link:hover{background:rgba(255,255,255,.16)}
+#wt-app.light #wt-desk-link{border-color:rgba(0,0,0,.12);background:rgba(0,0,0,.05)}
 @media(max-width:600px){
   #wt-top{left:0;flex-wrap:wrap;padding:6px 8px;gap:5px;background:var(--wt-bg);border-bottom:1px solid var(--wt-border)}
   #wt-brand{display:none}
@@ -1861,10 +1864,12 @@ const TopBar = defineComponent({
       searchVal.value='';
       actions.clearSearch();
     }
-    return { store, hud, searchVal, onSearch, clearSearch, actions, fmtK, fmt, shortWh };
+    // the standalone page (/warehouse-3d, opened from the apps screen) has no desk navbar: offer the way back
+    return { store, hud, searchVal, onSearch, clearSearch, actions, fmtK, fmt, shortWh, inDesk: !!window.frappe };
   },
   template: `
     <div id="wt-top">
+      <a v-if="!inDesk" id="wt-desk-link" href="/app" title="Back to the desk">← Desk</a>
       <button id="wt-mob-menu" @click="actions.toggleSidebar()" aria-label="Menu">☰</button>
       <div id="wt-switcher">
         <div class="wt-sw-group">

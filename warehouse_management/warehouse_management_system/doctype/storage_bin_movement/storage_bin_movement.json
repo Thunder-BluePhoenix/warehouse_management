@@ -18,7 +18,8 @@
    "label": "Storage Bin",
    "reqd": 1,
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "read_only_depends_on": "eval:!doc.__islocal"
   },
   {
    "fieldname": "from_location",
@@ -35,17 +36,19 @@
    "label": "To",
    "reqd": 1,
    "in_list_view": 1,
-   "in_standard_filter": 1
+   "in_standard_filter": 1,
+   "read_only_depends_on": "eval:!doc.__islocal"
   },
   {
    "fieldname": "remarks",
    "fieldtype": "Small Text",
-   "label": "Remarks"
+   "label": "Remarks",
+   "read_only_depends_on": "eval:!doc.__islocal"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-25 18:00:00.000000",
+ "modified": "2026-09-26 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Warehouse Management System",
  "name": "Storage Bin Movement",
@@ -57,7 +60,8 @@
    "export": 1,
    "print": 1,
    "role": "System Manager",
-   "create": 1
+   "create": 1,
+   "write": 1
   },
   {
    "read": 1,
@@ -65,7 +69,8 @@
    "export": 1,
    "print": 1,
    "role": "Stock Manager",
-   "create": 1
+   "create": 1,
+   "write": 1
   },
   {
    "read": 1,
@@ -73,7 +78,8 @@
    "export": 1,
    "print": 1,
    "role": "Stock User",
-   "create": 1
+   "create": 1,
+   "write": 1
   }
  ],
  "sort_field": "creation",

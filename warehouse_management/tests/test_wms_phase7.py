@@ -146,3 +146,87 @@ class TestWmsPhase7(WMTestCase):
 		by_facility = {labels[k]: v for k, v in row.items() if k.startswith("f")}
 		self.assertEqual((by_facility["_W7 FacA B"], by_facility["_W7 FacB B"]), (4, 6))
 		self.assertEqual((row.in_stock, row.on_hold, row.available), (10, 1, 9))
+
+	# ── location generator (rack naming) ────────────────────
+
+	def test_generate_locations_builds_a_named_rack_layout_and_can_be_rerun(self):
+		from warehouse_management.api import warehouse_3d as api
+
+		building = self.wh("_W7 Gen B", "Building")
+		floor = self.wh("_W7 Gen F", "Floor", building.name)
+		args = dict(
+			bays="A-B",
+			tiers=2,
+			rows=3,
+			level_pattern="_G{bay}{tier}{row:02d}",
+			slot_pattern="_G{bay}-{row:02d}",
+		)
+
+		preview = api.generate_locations(floor.name, preview=1, **args)
+		self.assertEqual((preview["slots"], preview["levels"], preview["new_levels"]), (6, 12, 12))
+		self.assertEqual(preview["sample"][0], "_GA101")
+		made = api.generate_locations(floor.name, uom="Nos", capacity=4, **args)
+		self.assertEqual((made["slots"], made["levels"], made["skipped"]), (6, 12, 0))
+
+		slots = {s["label"]: s for s in api.get_slots(floor.name)}
+		self.assertEqual(
+			[lv["label"] for lv in slots["_GA-03"]["levels"]], ["_GA103", "_GA203"]
+		)  # tier 1 at the bottom
+		self.assertEqual((slots["_GB-02"]["row"], slots["_GB-02"]["col"]), (1, 1))
+		self.assertEqual(slots["_GA-01"]["levels"][0]["uoms"][0]["cap"], 4)
+		self.assertEqual(api.generate_locations(floor.name, **args)["skipped"], 12)  # rerun: nothing new
+		with self.assertRaises(frappe.ValidationError):
+			api.generate_locations(floor.name, bays="A", tiers=1, rows=1, level_pattern="{bay.__class__}")
+
+	# ── packing ─────────────────────────────────────────────
+
+	def test_pack_scans_fill_packages_that_become_packing_slips(self):
+		_floor, _slot, (level, _other) = self.floor_with_levels("_W7 Pack")
+		part = self.item("_W7 Pack Part")
+		self.receive(part, level.name, qty=5)
+		customer = frappe.db.exists("Customer", "_W7 Customer") or (
+			frappe.get_doc(
+				doctype="Customer",
+				customer_name="_W7 Customer",
+				customer_group=frappe.db.get_value("Customer Group", {"is_group": 0}),
+				territory=frappe.db.get_value("Territory", {"is_group": 0}),
+			)
+			.insert()
+			.name
+		)
+		note = frappe.get_doc(
+			doctype="Delivery Note",
+			customer=customer,
+			company=self.company,
+			items=[{"item_code": part, "qty": 3, "rate": 50, "warehouse": level.name}],
+		).insert()
+
+		scan.pack_scan(note.name, part)
+		scan.pack_scan(note.name, part)
+		self.assertEqual(scan.get_pack(note.name)["rows"][0]["in_package"], 2)
+		first = scan.close_package(note.name)
+		self.assertEqual(
+			(first["package"], frappe.db.get_value("Packing Slip", first["packing_slip"], "docstatus")),
+			(1, 1),
+		)
+		self.assertEqual(frappe.db.get_value("Delivery Note Item", note.items[0].name, "packed_qty"), 2)
+
+		with self.assertRaises(frappe.ValidationError):
+			scan.pack_scan(note.name, part, qty=2)  # only 1 left to pack
+		scan.pack_scan(note.name, part)
+		self.assertEqual(scan.close_package(note.name)["package"], 2)
+		with self.assertRaises(frappe.ValidationError):
+			scan.close_package(note.name)  # nothing open
+
+	# ── cross-entity visibility ─────────────────────────────
+
+	def test_availability_shows_only_warehouses_the_user_may_see(self):
+		_floor, _slot, (mine, theirs) = self.floor_with_levels("_W7 Vis")
+		part = self.item("_W7 Vis Part")
+		self.receive(part, mine.name, qty=2)
+		self.receive(part, theirs.name, qty=7)
+		user = self.user("_w7.channel@example.com", "Stock User")
+		frappe.get_doc(doctype="User Permission", user=user, allow="Warehouse", for_value=mine.name).insert()
+
+		self.as_user(user)
+		self.assertEqual(holds.get_available_qty(part)["warehouses"], {mine.name: 2})
