@@ -1,4 +1,4 @@
-/* WMS Scan: put away, move totes, pick and count by scanning. Works with a hardware scanner (types the code and
+/* WMS Scan: put away, move totes, pick, pack and count by scanning. Works with a hardware scanner (types the code and
    presses Enter) or the phone camera (the scan icon in the input). All the rules run on the server. */
 frappe.pages["wms-scan"].on_page_load = function (wrapper) {
 	const page = frappe.ui.make_app_page({
@@ -33,6 +33,7 @@ class WmsScan {
 				{ value: "putaway", label: __("Put away") },
 				{ value: "move", label: __("Move tote") },
 				{ value: "pick", label: __("Pick") },
+				{ value: "pack", label: __("Pack") },
 				{ value: "count", label: __("Count") },
 			],
 			default: "putaway",
@@ -52,6 +53,14 @@ class WmsScan {
 			label: __("Pick List"),
 			get_query: () => ({ filters: { docstatus: 0 } }),
 			change: () => this.load_pick(),
+		});
+		this.pack_field = page.add_field({
+			fieldname: "delivery_note",
+			fieldtype: "Link",
+			options: "Delivery Note",
+			label: __("Delivery Note"),
+			get_query: () => ({ filters: { docstatus: 0 } }),
+			change: () => this.load_pack(),
 		});
 		this.count_field = page.add_field({
 			fieldname: "cycle_count",
@@ -104,6 +113,7 @@ class WmsScan {
 		this.at = null; // pick: the level or tote the picker is standing at
 		this.pick = null; // pick: rows from the server
 		this.count = null; // count: rows as a counter sees them (no expected quantities)
+		this.pack = null; // pack: delivery lines and the open package
 	}
 
 	set_mode(mode) {
@@ -112,6 +122,7 @@ class WmsScan {
 		this.source_field.$wrapper.toggle(mode === "putaway");
 		this.pick_field.$wrapper.toggle(mode === "pick");
 		this.count_field.$wrapper.toggle(mode === "count");
+		this.pack_field.$wrapper.toggle(mode === "pack");
 		this.page.clear_primary_action();
 		if (mode === "putaway") {
 			this.page.set_primary_action(__("Post"), () => this.post_putaway());
@@ -120,6 +131,9 @@ class WmsScan {
 			this.load_pick();
 		} else if (mode === "count") {
 			this.load_count();
+		} else if (mode === "pack") {
+			this.page.set_primary_action(__("Close Package"), () => this.close_package());
+			this.load_pack();
 		}
 		this.render();
 	}
@@ -294,6 +308,51 @@ class WmsScan {
 		});
 	}
 
+	// ── pack ───────────────────────────────────────────
+	async load_pack() {
+		const name = this.pack_field.get_value();
+		this.pack = null;
+		if (name) {
+			const r = await frappe.call({
+				method: WMS_API + "get_pack",
+				args: { delivery_note: name },
+			});
+			this.pack = r.message;
+		}
+		this.render();
+		this.focus();
+	}
+
+	async on_pack(s) {
+		if (!this.pack) return this.fail(__("Choose the Delivery Note first."));
+		await frappe.call({
+			method: WMS_API + "pack_scan",
+			args: { delivery_note: this.pack.name, code: s.code, qty: this.qty.get_value() || 1 },
+		});
+		frappe.utils.play_sound("click");
+		this.qty.set_value(1);
+		const r = await frappe.call({
+			method: WMS_API + "get_pack",
+			args: { delivery_note: this.pack.name },
+		});
+		this.pack = r.message;
+	}
+
+	async close_package() {
+		if (!this.pack) return this.fail(__("Choose the Delivery Note first."));
+		const r = await frappe.call({
+			method: WMS_API + "close_package",
+			args: { delivery_note: this.pack.name },
+			freeze: true,
+		});
+		frappe.show_alert({
+			message: __("Package {0} closed ({1})", [r.message.package, r.message.packing_slip]),
+			indicator: "green",
+		});
+		frappe.utils.play_sound("submit");
+		await this.load_pack();
+	}
+
 	// ── count ──────────────────────────────────────────
 	async load_count() {
 		const name = this.count_field.get_value();
@@ -365,6 +424,35 @@ class WmsScan {
 						esc(this.tote.location || __("nowhere")),
 				  ])
 				: __("Scan a tote");
+		} else if (this.mode === "pack") {
+			if (!this.pack) {
+				prompt = __("Choose the Delivery Note to pack");
+			} else {
+				const left = this.pack.rows.some((r) => r.packed + r.in_package < r.qty);
+				prompt = this.pack.package
+					? __("Package {0} is open: scan items into it, then Close Package", [
+							`<b>${this.pack.package}</b>`,
+					  ])
+					: left
+					? __("Scan an item to start the next package")
+					: __("Everything is packed: submit the Delivery Note to ship");
+				list = this.pack.rows
+					.map((r) => {
+						const done = r.packed + r.in_package >= r.qty;
+						return `<div class="wms-row ${done ? "done" : ""}">
+						<div><b>${esc(r.item_code)}</b> ${esc(r.item_name || "")}
+						${
+							r.in_package
+								? `<div class="text-muted">${__("in this package")}: ${
+										r.in_package
+								  }</div>`
+								: ""
+						}</div>
+						<div class="wms-count">${r.packed + r.in_package} / ${r.qty} ${esc(r.uom || "")}</div>
+					</div>`;
+					})
+					.join("");
+			}
 		} else if (this.mode === "count") {
 			if (!this.count) {
 				prompt = __("Choose a Cycle Count");

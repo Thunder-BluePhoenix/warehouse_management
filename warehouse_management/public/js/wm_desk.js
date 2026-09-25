@@ -152,4 +152,112 @@
 		});
 		dialog.show();
 	};
+
+	// Build a rack layout under a Floor or Zone: bays x rows of slots, tiers of levels, named by pattern.
+	wm.generate_locations = function (parent, after) {
+		const values = () => dialog.get_values(true) || {};
+		const preview = frappe.utils.debounce(() => {
+			const v = values();
+			if (!v.bays || !v.tiers || !v.rows) return;
+			frappe
+				.call({
+					method: API + "generate_locations",
+					args: { parent, ...v, preview: 1 },
+					error: () => dialog.set_df_property("preview", "options", ""),
+				})
+				.then((r) => {
+					const p = r.message;
+					dialog.set_df_property(
+						"preview",
+						"options",
+						`<div class="text-muted">${__(
+							"{0} slots, {1} levels ({2} new), e.g. {3}",
+							[
+								p.slots,
+								p.levels,
+								p.new_levels,
+								p.sample.map(frappe.utils.escape_html).join(", "),
+							]
+						)}</div>`
+					);
+				});
+		}, 400);
+		const dialog = new frappe.ui.Dialog({
+			title: __("Generate Locations"),
+			fields: [
+				{
+					fieldname: "bays",
+					fieldtype: "Data",
+					label: __("Bays"),
+					default: "A-D",
+					reqd: 1,
+					description: __("A range or a list, e.g. A-D or A,B,F"),
+					onchange: preview,
+				},
+				{
+					fieldname: "tiers",
+					fieldtype: "Int",
+					label: __("Tiers (levels per slot)"),
+					default: 5,
+					reqd: 1,
+					onchange: preview,
+				},
+				{
+					fieldname: "rows",
+					fieldtype: "Int",
+					label: __("Rows per bay"),
+					default: 20,
+					reqd: 1,
+					onchange: preview,
+				},
+				{ fieldtype: "Column Break" },
+				{
+					fieldname: "level_pattern",
+					fieldtype: "Data",
+					label: __("Level Name"),
+					default: "{bay}{tier}{row:02d}",
+					description: __("A120 = bay A, tier 1, row 20"),
+					onchange: preview,
+				},
+				{
+					fieldname: "slot_pattern",
+					fieldtype: "Data",
+					label: __("Slot Name"),
+					default: "{bay}-{row:02d}",
+					onchange: preview,
+				},
+				{ fieldname: "uom", fieldtype: "Link", options: "UOM", label: __("Capacity UOM") },
+				{ fieldname: "capacity", fieldtype: "Float", label: __("Capacity per Level") },
+				{ fieldtype: "Section Break" },
+				{ fieldname: "preview", fieldtype: "HTML" },
+			],
+			primary_action_label: __("Generate"),
+			primary_action(v) {
+				frappe
+					.call({
+						method: API + "generate_locations",
+						args: { parent, ...v },
+						freeze: true,
+						freeze_message: __("Creating locations..."),
+					})
+					.then((r) => {
+						dialog.hide();
+						const res = r.message;
+						frappe.show_alert({
+							message: res.queued
+								? __("Creating {0} levels in the background", [res.new_levels])
+								: __("Created {0} slots and {1} levels ({2} already existed)", [
+										res.slots,
+										res.levels,
+										res.skipped,
+								  ]),
+							indicator: "green",
+						});
+						if (after) after(res);
+					});
+			},
+		});
+		dialog.show();
+		preview();
+	};
 })();

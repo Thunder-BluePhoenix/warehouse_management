@@ -1,4 +1,5 @@
 import json
+import re
 
 import frappe
 from frappe import _
@@ -696,6 +697,139 @@ def split_area(
 		entry.insert()
 		entry.submit()
 	return {"name": area.name, "stock_entry": entry.name if entry else None}
+
+
+_PATTERN = re.compile(r"(?:[^{}]|\{bay\}|\{(?:tier|row)(?::0?\d*d)?\})*")
+GENERATE_NOW_LIMIT = 300  # more levels than this are created by a background job
+
+
+def _expand_bays(bays):
+	"""'A-D,F' -> [A, B, C, D, F]; '1-3' -> [1, 2, 3]; anything else is taken literally."""
+	out = []
+	for token in (t.strip() for t in (bays or "").split(",")):
+		first, _, last = token.partition("-")
+		if last and len(first) == len(last) == 1 and first.isalpha() and last.isalpha():
+			out += [chr(c) for c in range(ord(first.upper()), ord(last.upper()) + 1)]
+		elif last and first.isdigit() and last.isdigit():
+			out += [str(n) for n in range(int(first), int(last) + 1)]
+		elif token:
+			out.append(token)
+	return out
+
+
+def _location_plan(bays, tiers, rows, level_pattern, slot_pattern):
+	for pattern in (level_pattern, slot_pattern):
+		if not _PATTERN.fullmatch(pattern or ""):
+			frappe.throw(
+				_("Naming pattern {0} may use only {{bay}}, {{tier}} and {{row}} (e.g. {{row:02d}}).").format(
+					frappe.bold(pattern)
+				)
+			)
+	return [
+		(
+			bay_index,
+			row,
+			slot_pattern.format(bay=bay, row=row, tier=0),
+			[level_pattern.format(bay=bay, tier=tier, row=row) for tier in range(1, tiers + 1)],
+		)
+		for bay_index, bay in enumerate(_expand_bays(bays))
+		for row in range(1, rows + 1)
+	]
+
+
+@frappe.whitelist(methods=["POST"])
+def generate_locations(
+	parent: str,
+	bays: str,
+	tiers: int,
+	rows: int,
+	level_pattern: str = "{bay}{tier}{row:02d}",
+	slot_pattern: str = "{bay}-{row:02d}",
+	uom: str | None = None,
+	capacity: float = 0,
+	preview: int = 0,
+):
+	"""Build a rack layout under a Floor or Zone: one Slot per bay and row, one Level per tier, named by
+	pattern (default: A120 = bay A, tier 1, row 20). Existing names are skipped, so it can be re-run to
+	extend a layout. Levels stack by name in 3D, so tier 1 sits at the bottom."""
+	_require_edit_permission()
+	floor = frappe.get_doc("Warehouse", parent)
+	floor.check_permission("read")
+	if floor.get("wt_warehouse_type") not in ("Floor", "Zone") or not floor.is_group:
+		frappe.throw(_("Generate locations under a Floor or Zone."))
+	tiers, rows = cint(tiers), cint(rows)
+	if tiers < 1 or rows < 1:
+		frappe.throw(_("Tiers and rows must be at least 1."))
+	plan = _location_plan(bays, tiers, rows, level_pattern, slot_pattern)
+	if not plan:
+		frappe.throw(_("Give at least one bay, e.g. A-D."))
+	total = len(plan) * tiers
+	if total > 10000:
+		frappe.throw(_("{0} levels is too many for one run; generate the layout in parts.").format(total))
+
+	existing = set(
+		frappe.get_all(
+			"Warehouse", filters={"company": floor.company}, pluck="warehouse_name", limit_page_length=0
+		)
+	)
+	new_levels = sum(1 for *_x, levels in plan for name in levels if name not in existing)
+	if cint(preview):
+		return {
+			"slots": len(plan),
+			"levels": total,
+			"new_levels": new_levels,
+			"sample": plan[0][3][:3] + plan[-1][3][-1:],
+		}
+	args = dict(parent=floor.name, company=floor.company, plan=plan, uom=uom, capacity=_flt(capacity))
+	if new_levels > GENERATE_NOW_LIMIT:
+		frappe.enqueue(_create_locations, queue="long", timeout=3600, **args)
+		return {"queued": True, "new_levels": new_levels}
+	return _create_locations(**args)
+
+
+def _create_locations(parent, company, plan, uom=None, capacity=0):
+	existing = {
+		w.warehouse_name: w.name
+		for w in frappe.get_all(
+			"Warehouse", filters={"company": company}, fields=["name", "warehouse_name"], limit_page_length=0
+		)
+	}
+	created = {"slots": 0, "levels": 0, "skipped": 0}
+	for bay_index, row, slot_name, levels in plan:
+		slot = existing.get(slot_name)
+		if not slot:
+			slot = (
+				frappe.get_doc(
+					doctype="Warehouse",
+					warehouse_name=slot_name,
+					company=company,
+					parent_warehouse=parent,
+					is_group=1,
+					wt_warehouse_type="Slot",
+					wt_row=bay_index,
+					wt_col=row - 1,
+				)
+				.insert()  # Warehouse create permission
+				.name
+			)
+			created["slots"] += 1
+		for name in levels:
+			if name in existing:
+				created["skipped"] += 1
+				continue
+			level = frappe.get_doc(
+				doctype="Warehouse",
+				warehouse_name=name,
+				company=company,
+				parent_warehouse=slot,
+				is_group=0,
+				wt_warehouse_type="Level",
+			)
+			if uom and capacity:
+				level.append("wt_uom_capacities", {"uom": uom, "capacity": capacity})
+			level.insert()
+			created["levels"] += 1
+	return created
 
 
 # ─────────────────────────────────────────────────────────────
