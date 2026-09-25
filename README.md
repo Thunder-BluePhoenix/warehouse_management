@@ -2,6 +2,8 @@
 
 A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on its own and needs only ERPNext; it adds no stock ledger of its own.
 
+**Generate Locations** (Warehouse form of a Floor or Zone): build a rack layout in one go from bays, tiers and rows, named by a pattern (default `A120` = bay A, tier 1, row 20). It shows a preview, and can be re-run to extend a layout.
+
 **Layout.** Tag warehouses with a role: **Building → Floor → Zone → Slot → Level**. Zones nest to any depth (zone › aisle › rack), so the tree grows with the business. A Level is one storage level or bay. Each Floor draws as **Rack** (levels stacked on a pillar) or **Parking** (bays side by side on the ground).
 
 **3D/2D view** (`/app/warehouse-3d` in desk, `/warehouse-3d` standalone):
@@ -21,6 +23,7 @@ A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on
 - **Put away**: scan the item, then a level or tote. It suggests a place from Putaway Rules or where the item already is, and posts one Material Transfer.
 - **Move tote**: scan the tote, then its new location.
 - **Pick**: work through an ERPNext Pick List in walking order. Finishing ships what was picked, drafts the Delivery Note, and tells the customer by comment and email what is not in this shipment.
+- **Pack**: scan a draft Delivery Note's items into packages; *Close Package* turns each into a submitted Packing Slip.
 - **Count**: scan a location or tote, then everything on it, for a Cycle Count.
 
 **Cycle Count.** Count a floor, zone, slot or single level (totes included). The count is blind: counters never see expected quantities (they are at permission level 1, which only Stock Manager reads). *Send for Approval* re-reads the stock at that moment; someone other than the counter approves, and approval posts one Stock Reconciliation, dated at the count, for the rows that differ.
@@ -36,7 +39,7 @@ A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on
 - **Putaway Rule sync** from level capacities.
 - **Gate Entry**: a generic In/Out register that posts a Material Receipt or Issue, with *Suggest Free Bay*.
 
-**Not in this app:** packing (use ERPNext's Packing Slip).
+The standalone page (`/warehouse-3d`) has a *← Desk* link back to the desk.
 
 Access follows ERPNext permissions: viewing needs read on **Warehouse** and ERPNext's **Bin** (stock balances); editing needs write on **Warehouse** (Item Manager by default). Adjust in Role Permission Manager.
 
