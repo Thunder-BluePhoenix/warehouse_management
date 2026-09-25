@@ -2,9 +2,9 @@
 
 A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on its own and needs only ERPNext; it adds no stock ledger of its own.
 
-**Generate Locations** (Warehouse form of a Floor or Zone): build a rack layout in one go from bays, tiers and rows, named by a pattern (default `A120` = bay A, tier 1, row 20). It shows a preview, and can be re-run to extend a layout.
-
 **Layout.** Tag warehouses with a role: **Building → Floor → Zone → Slot → Level**. Zones nest to any depth (zone › aisle › rack), so the tree grows with the business. A Level is one storage level or bay. Each Floor draws as **Rack** (levels stacked on a pillar) or **Parking** (bays side by side on the ground).
+
+**Generate Locations** (Warehouse form of a Floor or Zone): build a rack layout in one go from bays, tiers and rows, named by a pattern (default `A120` = bay A, tier 1, row 20). It shows a preview, and can be re-run to extend a layout.
 
 **3D/2D view** (`/app/warehouse-3d` in desk, `/warehouse-3d` standalone):
 - Fill per level is the highest of its UOM capacities and its weight limit. Over 100 % shows as *Over*; stock with no capacity set shows as *No capacity*.
