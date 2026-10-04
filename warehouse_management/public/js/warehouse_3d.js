@@ -217,7 +217,7 @@ const CSS = `
 #wt-legend{display:flex;gap:8px;align-items:center}
 .wt-li{display:flex;align-items:center;gap:4px;font-size:9px;color:rgba(255,255,255,.4)}
 .wt-lb{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-#wt-sb{position:absolute;left:0;top:0;bottom:0;width:148px;background:var(--wt-sb);border-right:1px solid var(--wt-border);overflow-y:auto;z-index:15;display:flex;flex-direction:column;transition:background .3s,border-color .3s}
+#wt-sb{position:absolute;left:0;top:0;bottom:0;width:148px;background:var(--wt-sb);border-right:1px solid var(--wt-border);overflow:hidden;z-index:15;display:flex;flex-direction:column;transition:background .3s,border-color .3s}
 #wt-sb::-webkit-scrollbar{width:3px}
 #wt-sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px}
 .wt-sb-brand{padding:10px 10px 7px;font-size:12px;font-weight:800;color:var(--wt-text);border-bottom:1px solid var(--wt-border);flex-shrink:0}
@@ -228,7 +228,8 @@ const CSS = `
 .wt-g-name{font-size:11px;font-weight:700;color:var(--wt-text);display:block}
 .wt-g-item.act .wt-g-name{color:var(--wt-accent2)}
 .wt-g-meta{font-size:9px;color:var(--wt-text3)}
-.wt-sb-foot{margin-top:auto;padding:8px 10px;border-top:1px solid rgba(255,255,255,.06)}
+#wt-sb-list{flex:1 1 auto;min-height:0;overflow-y:auto}  /* only the list scrolls; the buttons below stay put */
+.wt-sb-foot{margin-top:auto;flex-shrink:0;padding:8px 10px;border-top:1px solid rgba(255,255,255,.06);background:var(--wt-sb)}
 .wt-sb-btn{width:100%;height:28px;border-radius:6px;border:1px solid rgba(59,130,246,.4);background:rgba(59,130,246,.1);color:#60a5fa;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;line-height:1}
 .wt-sb-btn:hover{background:rgba(59,130,246,.2)}
 #wt-tt{position:absolute;background:var(--wt-bg2);border:1px solid var(--wt-border);border-radius:9px;padding:9px 11px;pointer-events:none;z-index:50;min-width:155px;box-shadow:0 4px 16px rgba(0,0,0,.18)}
@@ -1480,7 +1481,7 @@ const actions = {
           wt_row: 0, wt_col: 0, wt_row_gap: 0, uom_capacities: [], ...FORM_EXTRAS,
         };
       } catch(e) {
-        store.whFormError = 'Failed to load slot: '+e.message;
+        store.whFormError = 'Failed to load ' + l('Slot') + ': ' + e.message;
         store.whForm = {
           name: null, warehouse_name: '', company: store.whCompanies[0]?.name || '',
           wt_warehouse_type: 'Level', parent_warehouse: presetParent, is_group: false,
@@ -1640,7 +1641,7 @@ const actions = {
 
   async goToHit(h) {
     store.searchOpen=false;
-    if (!h.floor) { notify('That location is not part of a 3D floor layout', 'orange'); return; }
+    if (!h.floor) { notify(`That location is not part of a 3D ${l('Floor')} layout`, 'orange'); return; }
     if (store.curGrp?.id !== h.floor) {
       const g = store.groups.find(x=>x.id===h.floor);
       if (!g) { notify(`That ${l('Floor')} is not available to you`, 'orange'); return; }
@@ -1815,7 +1816,7 @@ const actions = {
       store.fpSaveOk=true;
       clearTimeout(store._fpSaveOkTimer);
       store._fpSaveOkTimer=setTimeout(()=>{store.fpSaveOk=false;},3000);
-      notify('Floor plan saved', 'green');
+      notify(L('Floor') + ' plan saved', 'green');
       await actions.selectGroup(store.fpGroup);
     } catch(e){
       notify('Save failed: '+e.message, 'red');
@@ -2061,7 +2062,7 @@ const DetailPanel = defineComponent({
         </div>
 
         <div class="wt-divider"></div>
-        <span class="wt-dp-sec">All levels — {{d.slot.label}}</span>
+        <span class="wt-dp-sec">All {{l('Level', 1)}} — {{d.slot.label}}</span>
         <div v-for="lv2 in d.slot.levels" :key="lv2.wh"
           :class="['wt-dp-lv', lvKey(d.slot,lv2)===store.selKey?'sel':'']"
           @click="actions.clickLv(d.slot.wh, lv2.wh)">
@@ -2085,7 +2086,7 @@ const DetailPanel = defineComponent({
         <button v-if="store.canEdit" class="wt-cfg-btn" style="background:#475569" @click="actions.syncPutaway(d.slot.wh)"
           :title="'Create or update ERPNext Putaway Rules from this ' + l('Slot') + '\\'s capacities'">⇄ Sync putaway rules</button>
         <button v-if="store.canEdit && inDesk" class="wt-cfg-btn" style="background:#475569" @click="actions.splitArea(d.lv.wh)"
-          title="Carve a new area out of this level and move some stock into it">✂ Split this area</button>
+          :title="'Carve a new area out of this ' + l('Level') + ' and move some stock into it'">✂ Split this area</button>
       </template>
     </div>
   `,
@@ -2257,7 +2258,8 @@ const WarehouseManageModal = defineComponent({
         (row.name||'').toLowerCase().includes(q) ||
         (row.parent_warehouse||'').toLowerCase().includes(q) ||
         (row.company||'').toLowerCase().includes(q) ||
-        (row.wt_warehouse_type||'').toLowerCase().includes(q)
+        (row.wt_warehouse_type||'').toLowerCase().includes(q) ||
+        (row.wt_warehouse_type ? L(row.wt_warehouse_type) : '').toLowerCase().includes(q)
       ));
     });
     return { store, actions, filteredList };
@@ -2288,7 +2290,7 @@ const WarehouseManageModal = defineComponent({
           <div v-else-if="!filteredList.length" class="wt-wm-empty">No warehouses match "{{store.whManageSearch}}".</div>
           <template v-else>
             <div v-for="row in filteredList" :key="row.name" class="wt-wm-row">
-              <span class="wt-wm-badge" :class="row.disabled?'disabled':row.wt_warehouse_type">{{row.disabled?'Disabled':(row.wt_warehouse_type||'—')}}</span>
+              <span class="wt-wm-badge" :class="row.disabled?'disabled':row.wt_warehouse_type">{{row.disabled?'Disabled':(row.wt_warehouse_type?L(row.wt_warehouse_type):'—')}}</span>
               <div class="wt-wm-row-main">
                 <div class="wt-wm-row-name">{{row.warehouse_name}}</div>
                 <div class="wt-wm-row-meta">{{row.parent_warehouse || 'Top level'}}</div>
