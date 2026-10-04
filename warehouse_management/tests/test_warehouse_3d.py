@@ -181,7 +181,10 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 			is_stock_item=1, has_serial_no=1,
 		).insert().name  # fmt: skip
 		sn = frappe.get_doc(
-			doctype="Serial No", serial_no=f"_WT-SN-{frappe.generate_hash(length=6)}", item_code=item
+			doctype="Serial No",
+			serial_no=f"_WT-SN-{frappe.generate_hash(length=6)}",
+			item_code=item,
+			company=self.company,
 		).insert()
 		sn.db_set("warehouse", level.name)
 		settings = frappe.get_single("WMS Settings")
