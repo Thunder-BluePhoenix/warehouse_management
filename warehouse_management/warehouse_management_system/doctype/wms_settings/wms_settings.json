@@ -18,7 +18,19 @@
   "labels_section",
   "label_width_mm",
   "column_break_labels",
-  "label_height_mm"
+  "label_height_mm",
+  "location_labels_section",
+  "label_building",
+  "label_floor",
+  "label_zone",
+  "column_break_location_labels",
+  "label_slot",
+  "label_level",
+  "view_3d_section",
+  "bay_fill",
+  "warehouse_fields",
+  "column_break_view_3d",
+  "serial_no_fields"
  ],
  "fields": [
   {
@@ -101,11 +113,80 @@
    "fieldtype": "Float",
    "default": "50",
    "label": "Label Height (mm)"
+  },
+  {
+   "fieldname": "location_labels_section",
+   "fieldtype": "Section Break",
+   "label": "Location Labels",
+   "description": "What each location role is called in Warehouse 3D, for example Area, Pillar, Bay and Level for a vehicle yard. Blank keeps the role name. Only the displayed name changes; the stored role does not."
+  },
+  {
+   "fieldname": "label_building",
+   "fieldtype": "Data",
+   "label": "Building Label",
+   "placeholder": "Building"
+  },
+  {
+   "fieldname": "label_floor",
+   "fieldtype": "Data",
+   "label": "Floor Label",
+   "placeholder": "Floor"
+  },
+  {
+   "fieldname": "label_zone",
+   "fieldtype": "Data",
+   "label": "Zone Label",
+   "placeholder": "Zone"
+  },
+  {
+   "fieldname": "column_break_location_labels",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "label_slot",
+   "fieldtype": "Data",
+   "label": "Slot Label",
+   "placeholder": "Slot"
+  },
+  {
+   "fieldname": "label_level",
+   "fieldtype": "Data",
+   "label": "Level Label",
+   "placeholder": "Level"
+  },
+  {
+   "fieldname": "view_3d_section",
+   "fieldtype": "Section Break",
+   "label": "Warehouse 3D Display"
+  },
+  {
+   "fieldname": "bay_fill",
+   "fieldtype": "Select",
+   "label": "Slot Colour",
+   "options": "Fullest Level\nShare of Levels Used",
+   "default": "Fullest Level",
+   "description": "Fullest Level: a slot takes the colour of its fullest level (racks). Share of Levels Used: amber while any level is free, red only when all are full (stacks of single items, such as vehicles)."
+  },
+  {
+   "fieldname": "warehouse_fields",
+   "fieldtype": "Small Text",
+   "label": "Warehouse Fields to Show",
+   "description": "Fieldnames of Warehouse, one per line, shown for the selected level and its slot in the side panel (for example fields added by another app)."
+  },
+  {
+   "fieldname": "column_break_view_3d",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "serial_no_fields",
+   "fieldtype": "Small Text",
+   "label": "Serial No Fields to Show",
+   "description": "Fieldnames of Serial No, one per line, shown with each serial number on a level (for example a registration number)."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-25 20:00:00.000000",
+ "modified": "2026-10-05 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Warehouse Management System",
  "name": "WMS Settings",

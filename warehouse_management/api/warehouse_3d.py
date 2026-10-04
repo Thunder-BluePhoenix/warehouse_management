@@ -5,6 +5,8 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt
 
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import fieldnames
+
 # Security model (see docs/research/areas/11-codebase-platform.md §6.3):
 # - access comes from ERPNext's own permissions (Role Permission Manager), not a hard-coded role list:
 #   view = read on Warehouse and Bin (the viewer shows stock); edit = write on Warehouse (what saving needs anyway);
@@ -199,8 +201,13 @@ def get_slots(group_warehouse: str):
 	slots = [sl for sl in slots if sl["wh"] in allowed]
 
 	levels = _levels_by_slot([sl["wh"] for sl in slots], allowed)
+	# WMS Settings > Warehouse Fields to Show, for every slot and level in one query
+	details = _details([sl["wh"] for sl in slots] + [lv["wh"] for lvs in levels.values() for lv in lvs])
 	for sl in slots:
 		sl["levels"] = levels.get(sl["wh"], [])
+		sl["details"] = details.get(sl["wh"], [])
+		for lv in sl["levels"]:
+			lv["details"] = details.get(lv["wh"], [])
 
 	return slots
 
@@ -302,6 +309,7 @@ def _levels_by_slot(slot_names, allowed):
 	for loc, tote_id in totes.values():
 		tote_ids.setdefault(loc, []).append(tote_id)
 
+	extras = _level_extras([lv.wh for lv in levels])
 	by_slot = {}
 	for lv in levels:
 		level_caps = caps.get(lv.wh, {})
@@ -330,9 +338,64 @@ def _levels_by_slot(slot_names, allowed):
 				"kg_partial": weight["partial"],
 				"area": _flt(lv.area),
 				"totes": sorted(tote_ids.get(lv.wh, [])),
+				**extras.get(lv.wh, {}),
 			}
 		)
 	return by_slot
+
+
+SERIALS_PER_FLOOR = 5000  # ponytail: one query per floor; page the serial list if a floor holds more
+
+
+def _level_extras(levels):
+	"""{level: {serials, badges}}: the serial numbers on each level (with WMS Settings > Serial No Fields to Show) and
+	the badges other apps add through the `wm_location_badges` hook."""
+	if not levels:
+		return {}
+	sn_fields = fieldnames(frappe.get_cached_doc("WMS Settings").serial_no_fields)
+	meta = frappe.get_meta("Serial No")
+	out = {lv: {"serials": [], "badges": []} for lv in levels}
+	if frappe.has_permission("Serial No", "read"):
+		for sn in frappe.get_all(
+			"Serial No",
+			filters={"warehouse": ["in", levels]},
+			fields=["name", "item_code", "warehouse", *sn_fields],
+			order_by="name",
+			limit_page_length=SERIALS_PER_FLOOR,
+		):
+			out[sn.warehouse]["serials"].append(
+				{
+					"sn": sn.name,
+					"item": sn.item_code,
+					"fields": [
+						{"label": _(meta.get_label(f)), "value": sn.get(f)} for f in sn_fields if sn.get(f)
+					],
+				}
+			)
+	serials = {lv: [s["sn"] for s in extra["serials"]] for lv, extra in out.items()}
+	for hook in frappe.get_hooks("wm_location_badges"):
+		for lv, badges in (frappe.get_attr(hook)(levels=levels, serials=serials) or {}).items():
+			if lv in out:
+				out[lv]["badges"] += badges  # [{"label": ..., "color": ...}]
+	return out
+
+
+def _details(warehouses):
+	"""{warehouse: [{label, value}]} for WMS Settings > Warehouse Fields to Show; empty values are left out."""
+	wh_fields = fieldnames(frappe.get_cached_doc("WMS Settings").warehouse_fields)
+	if not wh_fields or not warehouses:
+		return {}
+	meta = frappe.get_meta("Warehouse")
+	return {
+		w.name: [
+			{"label": _(meta.get_label(f)), "value": w.get(f)}
+			for f in wh_fields
+			if w.get(f) not in (None, "", 0)
+		]
+		for w in frappe.get_all(
+			"Warehouse", filters={"name": ["in", warehouses]}, fields=["name", *wh_fields]
+		)
+	}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -397,7 +460,15 @@ def get_user_access():
 		"can_view": can_view(),
 		"can_edit": can_edit(),
 		"setup_complete": bool(frappe.db.exists("Warehouse", {"wt_warehouse_type": ["is", "set"]})),
+		"labels": role_labels(),
+		"bay_fill": frappe.get_cached_doc("WMS Settings").bay_fill or "Fullest Level",
 	}
+
+
+def role_labels():
+	"""{role: the name to show for it}. WMS Settings > Location Labels; a blank label shows the role itself."""
+	settings = frappe.get_cached_doc("WMS Settings")
+	return {role: (settings.get(f"label_{role.lower()}") or "").strip() or role for role in ROLES}
 
 
 # ─────────────────────────────────────────────────────────────
@@ -945,8 +1016,21 @@ def find_locations(query: str):
 				{"kind": "Storage Bin", "ref": tote.name, "item": None, "warehouse": tote.warehouse, "qty": 1}
 			)
 
+	locations = frappe.get_list(
+		"Warehouse",
+		or_filters={"name": ["like", like], "warehouse_name": ["like", like]},
+		filters={"disabled": 0, "wt_warehouse_type": ["is", "set"]},
+		fields=["name", "wt_warehouse_type"],
+		limit_page_length=10,
+	)
+	for wh in sorted(locations, key=lambda w: len(w.name)):  # the closest match (the shortest name) first
+		hits.append({"kind": "Location", "ref": wh.name, "item": None, "warehouse": wh.name, "qty": None})
+	# other apps add their own keys (a vehicle's registration, a location label...): hook wm_location_search(query)
+	for hook in frappe.get_hooks("wm_location_search"):
+		hits += frappe.get_attr(hook)(query=q) or []
+
 	allowed = _permitted_warehouses()
-	hits = [h for h in hits if h["warehouse"] in allowed]
+	hits = [h for h in hits if h.get("warehouse") in allowed]
 	tote_of = {
 		t.warehouse: t
 		for t in frappe.get_all(
