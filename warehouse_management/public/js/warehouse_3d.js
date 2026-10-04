@@ -84,6 +84,13 @@ function notify(message, indicator='green') {
   clearTimeout(notify._t);
   notify._t = setTimeout(()=>{ store.toast = null; }, 5000);
 }
+// Display names of the location roles (WMS Settings > Location Labels, e.g. Pillar for Floor). Only what is shown
+// changes: wt_warehouse_type keeps the role values. l() is the lower-case form for use inside a sentence.
+function L(role, plural) {
+  const s = (store.labels && store.labels[role]) || role;
+  return plural ? (/[^aeiou]y$/i.test(s) ? s.slice(0, -1) + 'ies' : s + 's') : s;
+}
+function l(role, plural) { return L(role, plural).toLowerCase(); }
 function shortWh(wh) { return (wh||'').replace(/\s*-\s*[A-Z0-9]{1,8}$/,''); }
 const POLL_MS = 30000;
 // Desk live refresh: stock events are published to the floor's own document room (see warehouse_rules),
@@ -611,6 +618,7 @@ const store = reactive({
   aisleGaps: [],
   _aisleStartX: 0,
   canEdit: false,
+  labels: {},
   canView: true,
   // Manage Warehouses (CRUD)
   whManageOpen: false,
@@ -1226,6 +1234,7 @@ const actions = {
         const access = await call('get_user_access');
         store.canEdit = !!(access && access.can_edit);
         store.canView = !!(access && access.can_view);
+        store.labels = (access && access.labels) || {};
       } catch(e) {
         console.error('WT: access check failed', e);
         store.canEdit = false;
@@ -1370,7 +1379,7 @@ const actions = {
           warehouse: store.cfgSlot.wh,
           data: JSON.stringify({ warehouse_name: newLabel }),
         });
-        notify('Slot renamed', 'green');
+        notify(L('Slot') + ' renamed', 'green');
         await actions.loadGroups();
         if (store.curGrp) await actions.selectGroup(store.curGrp);
       } catch(e) {
@@ -1620,7 +1629,7 @@ const actions = {
     if (!h.floor) { notify('That location is not part of a 3D floor layout', 'orange'); return; }
     if (store.curGrp?.id !== h.floor) {
       const g = store.groups.find(x=>x.id===h.floor);
-      if (!g) { notify('That floor is not available to you', 'orange'); return; }
+      if (!g) { notify(`That ${l('Floor')} is not available to you`, 'orange'); return; }
       await actions.selectGroup(g);
     }
     actions.focusLevel(h.slot, h.warehouse);
@@ -1831,14 +1840,14 @@ const Sidebar = defineComponent({
               :class="['wt-g-item', store.curGrp?.id===g.id?'act':'']"
               @click="actions.selectGroup(g)">
               <span class="wt-g-name">{{g.name}}</span>
-              <span class="wt-g-meta">{{g.slot_count||0}} slots</span>
+              <span class="wt-g-meta">{{g.slot_count||0}} {{l('Slot', (g.slot_count||0) !== 1)}}</span>
             </div>
           </template>
         </div>
         <div class="wt-sb-foot" v-if="store.canEdit">
           <button class="wt-sb-btn" style="margin-bottom:6px"
-            @click="actions.fpOpen(store.curGrp, store.slots)">⋹ Edit floor plan</button>
-          <button class="wt-sb-btn" style="margin-bottom:6px" @click="actions.openCfg(null)">⚙ Configure slot</button>
+            @click="actions.fpOpen(store.curGrp, store.slots)">⋹ Edit {{l('Floor')}} plan</button>
+          <button class="wt-sb-btn" style="margin-bottom:6px" @click="actions.openCfg(null)">⚙ Configure {{l('Slot')}}</button>
           <button class="wt-sb-btn" @click="actions.openWhManage()">🏬 Manage warehouses</button>
         </div>
       </div>
@@ -1892,7 +1901,7 @@ const TopBar = defineComponent({
         <div v-if="store.searchOpen" id="wt-hits">
           <div v-for="(h,i) in store.searchHits.slice(0,12)" :key="i" class="wt-hit" @click="actions.goToHit(h)">
             <div><span class="wt-hit-kind">{{h.kind}}</span> <b>{{h.ref}}</b> <span class="wt-hit-qty">× {{fmt(h.qty)}}</span></div>
-            <div class="wt-hit-where">{{h.floor_name||'Not in a 3D floor'}}<span v-for="z in (h.zone_path||[])"> › {{z}}</span><span v-if="h.slot_label"> › {{h.slot_label}}</span> / {{shortWh(h.warehouse)}}</div>
+            <div class="wt-hit-where">{{h.floor_name||('Not in a 3D ' + l('Floor'))}}<span v-for="z in (h.zone_path||[])"> › {{z}}</span><span v-if="h.slot_label"> › {{h.slot_label}}</span> / {{shortWh(h.warehouse)}}</div>
           </div>
           <div v-if="store.searchHits.length>12" class="wt-hit-more">+{{store.searchHits.length-12}} more — refine the search</div>
         </div>
@@ -1902,7 +1911,7 @@ const TopBar = defineComponent({
         <span id="wt-search-tag-x" @click="clearSearch">✕</span>
       </div>
       <div class="wt-pills">
-        <div class="wt-pill"><div class="wt-pv">{{hud.total}}</div><div class="wt-pl">Levels</div></div>
+        <div class="wt-pill"><div class="wt-pv">{{hud.total}}</div><div class="wt-pl">{{L('Level', 1)}}</div></div>
         <div class="wt-pill occ"><div class="wt-pv">{{hud.occ}}</div><div class="wt-pl">Active</div></div>
         <div class="wt-pill free"><div class="wt-pv">{{hud.free}}</div><div class="wt-pl">Empty</div></div>
         <div class="wt-pill qty" :title="hud.qtyTitle"><div class="wt-pv">{{hud.qty}}</div><div class="wt-pl">Stock</div></div>
@@ -1960,7 +1969,7 @@ const Tooltip = defineComponent({
           <span class="wt-tt-val" :style="{color:UCH[i]}">{{fmt(u.qty)}}/{{u.cap>0?fmt(u.cap):'∞'}}</span>
         </div>
       </div>
-      <div v-else style="font-size:9px;color:var(--wt-text3);margin-top:2px">Empty level</div>
+      <div v-else style="font-size:9px;color:var(--wt-text3);margin-top:2px">Empty {{l('Level')}}</div>
       <div v-if="store.ttData && store.ttData.lv.max_kg>0" class="wt-tt-row">
         <span class="wt-tt-dot" style="background:#94a3b8"></span>
         <span class="wt-tt-lbl">Weight</span>
@@ -2013,7 +2022,7 @@ const DetailPanel = defineComponent({
         </template>
 
         <div class="wt-divider"></div>
-        <span class="wt-dp-items-lbl">Items in level</span>
+        <span class="wt-dp-items-lbl">Items in {{l('Level')}}</span>
         <div v-if="!d.lv.items?.length" style="font-size:10px;color:rgba(255,255,255,.3)">No stock</div>
         <div v-for="it in (d.lv.items||[])" :key="it.c+'|'+(it.t||'')" class="wt-dp-item">
           <div>
@@ -2044,9 +2053,9 @@ const DetailPanel = defineComponent({
           </div>
         </div>
 
-        <button v-if="store.canEdit" class="wt-cfg-btn" @click="actions.openCfg(d.slot.wh)">⚙ Configure stack levels</button>
+        <button v-if="store.canEdit" class="wt-cfg-btn" @click="actions.openCfg(d.slot.wh)">⚙ Configure stack {{l('Level', 1)}}</button>
         <button v-if="store.canEdit" class="wt-cfg-btn" style="background:#475569" @click="actions.syncPutaway(d.slot.wh)"
-          title="Create or update ERPNext Putaway Rules from this slot's capacities">⇄ Sync putaway rules</button>
+          :title="'Create or update ERPNext Putaway Rules from this ' + l('Slot') + '\\'s capacities'">⇄ Sync putaway rules</button>
         <button v-if="store.canEdit && inDesk" class="wt-cfg-btn" style="background:#475569" @click="actions.splitArea(d.lv.wh)"
           title="Carve a new area out of this level and move some stock into it">✂ Split this area</button>
       </template>
@@ -2155,19 +2164,19 @@ const ConfigModal = defineComponent({
     <div id="wt-cfg-ov" :class="store.cfgOpen?'open':''" @click.self="actions.closeCfg()">
       <div id="wt-cfg-modal">
         <div class="wt-cfg-hdr">
-          <div class="wt-cfg-hdr-title">{{store.cfgSlot?'Configure: '+store.cfgSlot.label:'Select slot'}}</div>
+          <div class="wt-cfg-hdr-title">{{store.cfgSlot?'Configure: '+store.cfgSlot.label:'Select '+l('Slot')}}</div>
           <button class="wt-x-btn" @click="actions.closeCfg()">✕</button>
         </div>
         <div class="wt-cfg-body">
           <template v-if="!store.cfgSlot">
-            <span class="wt-cfg-slabel">Select a slot to configure</span>
+            <span class="wt-cfg-slabel">Select a {{l('Slot')}} to configure</span>
             <div v-for="sl in store.slots" :key="sl.wh" class="wt-slot-pick" @click="actions.openCfg(sl.wh)">
               <div class="wt-slot-pick-name">{{sl.label}}</div>
               <div class="wt-slot-pick-meta">{{sl.levels.length}} levels</div>
             </div>
           </template>
           <template v-else>
-            <span class="wt-cfg-slabel">Stack preview ({{store.cfgLvs.length}} levels)</span>
+            <span class="wt-cfg-slabel">Stack preview ({{store.cfgLvs.length}} {{l('Level', 1)}})</span>
             <div class="wt-cfg-preview">
               <div v-for="lv in store.cfgLvs" :key="lv.wh" style="flex:1;display:flex;align-items:flex-end;height:100%">
                 <div class="wt-cfg-pv-lv"
@@ -2175,7 +2184,7 @@ const ConfigModal = defineComponent({
                   :title="lv.label"></div>
               </div>
             </div>
-            <span class="wt-cfg-slabel">Levels</span>
+            <span class="wt-cfg-slabel">{{L('Level', 1)}}</span>
             <div v-for="(lv,i) in store.cfgLvs" :key="lv.wh" class="wt-cfg-lv-row">
               <div>
                 <div class="wt-cfg-lv-name">{{lv.label}}</div>
@@ -2184,10 +2193,10 @@ const ConfigModal = defineComponent({
               <button class="wt-wm-icon-btn" title="Edit bin" @click="actions.editBinFromSlot(lv.wh)">✎</button>
               <button class="wt-del-btn" title="Delete bin" @click="actions.deleteBinFromSlot(lv)">✕</button>
             </div>
-            <button class="wt-cfg-add-btn" @click="actions.addBinToSlot()">+ Add level</button>
-            <span class="wt-whform-hint" style="display:block;margin-top:4px">Levels are leaf warehouses under this slot — add, edit, or delete them the same way as in Manage Warehouses.</span>
+            <button class="wt-cfg-add-btn" @click="actions.addBinToSlot()">+ Add {{l('Level')}}</button>
+            <span class="wt-whform-hint" style="display:block;margin-top:4px">{{L('Level', 1)}} are leaf warehouses under this {{l('Slot')}}; add, edit or delete them the same way as in Manage Warehouses.</span>
             <div class="wt-cfg-field">
-              <label>Slot label</label>
+              <label>{{L('Slot')}} label</label>
               <input v-model="labelVal"/>
             </div>
           </template>
@@ -2295,14 +2304,14 @@ const WarehouseFormModal = defineComponent({
             <div class="wt-whform-field">
               <label>Warehouse Type (3D) *</label>
               <select v-model="store.whForm.wt_warehouse_type" :disabled="store.whFormLockType" @change="actions.onWhTypeChange()">
-                <option value="Building">Building</option>
-                <option value="Floor">Floor</option>
-                <option value="Zone">Zone (zone / aisle / rack; nestable)</option>
-                <option value="Slot">Slot</option>
-                <option value="Level">Level</option>
+                <option value="Building">{{L('Building')}}</option>
+                <option value="Floor">{{L('Floor')}}</option>
+                <option value="Zone">{{L('Zone')}} (zone / aisle / rack; nestable)</option>
+                <option value="Slot">{{L('Slot')}}</option>
+                <option value="Level">{{L('Level')}}</option>
               </select>
               <span class="wt-whform-hint" v-if="!store.whFormLockType">Role of this warehouse in the 3D view</span>
-              <span class="wt-whform-hint" v-else>Adding a level to this slot</span>
+              <span class="wt-whform-hint" v-else>Adding a {{l('Level')}} to this {{l('Slot')}}</span>
             </div>
 
             <div class="wt-whform-field">
@@ -2346,7 +2355,7 @@ const WarehouseFormModal = defineComponent({
                 <option value="Rack">Rack</option>
                 <option value="Parking">Parking</option>
               </select>
-              <span class="wt-whform-hint">Parking draws each slot's levels side by side on the ground as bays</span>
+              <span class="wt-whform-hint">Parking draws each {{l('Slot')}}'s {{l('Level', 1)}} side by side on the ground</span>
             </div>
 
             <template v-if="store.whForm.wt_warehouse_type==='Level'">
@@ -2610,7 +2619,7 @@ const View2D = defineComponent({
         </template>
         <div v-else style="padding:32px;color:var(--wt-text3);font-size:13px">
           <span v-if="store.searchQuery">No warehouses found with stock for "<b style="color:var(--wt-text2)">{{store.searchQuery}}</b>"</span>
-          <span v-else>No slots to display</span>
+          <span v-else>No {{l('Slot', 1)}} to display</span>
         </div>
       </div>
     </div>
@@ -2811,11 +2820,11 @@ const SetupWizard = defineComponent({
             <select class="wt-setup-select"
               :value="store.setupMapping[d.depth] || 'Skip'"
               @change="actions.setMappingRole(d.depth, $event.target.value)">
-              <option value="Building">Building</option>
-              <option value="Floor">Floor</option>
-              <option value="Zone">Zone (can repeat)</option>
-              <option value="Slot">Slot</option>
-              <option value="Level">Level</option>
+              <option value="Building">{{L('Building')}}</option>
+              <option value="Floor">{{L('Floor')}}</option>
+              <option value="Zone">{{L('Zone')}} (can repeat)</option>
+              <option value="Slot">{{L('Slot')}}</option>
+              <option value="Level">{{L('Level')}}</option>
               <option value="Skip">Skip level</option>
             </select>
           </div>
@@ -2835,25 +2844,25 @@ const SetupWizard = defineComponent({
           <div class="wt-setup-summary-grid">
             <div class="wt-setup-stat">
               <div class="wt-setup-stat-val">{{store.setupSummary?.Building || 0}}</div>
-              <div class="wt-setup-stat-lbl">Buildings</div>
+              <div class="wt-setup-stat-lbl">{{L('Building', 1)}}</div>
             </div>
             <div class="wt-setup-stat">
               <div class="wt-setup-stat-val">{{store.setupSummary?.Floor || 0}}</div>
-              <div class="wt-setup-stat-lbl">Floors</div>
+              <div class="wt-setup-stat-lbl">{{L('Floor', 1)}}</div>
             </div>
             <div class="wt-setup-stat">
               <div class="wt-setup-stat-val">{{store.setupSummary?.Slot || 0}}</div>
-              <div class="wt-setup-stat-lbl">Slots</div>
+              <div class="wt-setup-stat-lbl">{{L('Slot', 1)}}</div>
             </div>
             <div class="wt-setup-stat">
               <div class="wt-setup-stat-val">{{store.setupSummary?.Level || 0}}</div>
-              <div class="wt-setup-stat-lbl">Levels</div>
+              <div class="wt-setup-stat-lbl">{{L('Level', 1)}}</div>
             </div>
           </div>
 
           <div class="wt-setup-hint">
             <span>💡</span>
-            <span>You can fine-tune slot positions any time from "Edit floor plan", and configure per-UOM capacity from "Configure slot" in the sidebar.</span>
+            <span>You can fine-tune {{l('Slot')}} positions any time from "Edit {{l('Floor')}} plan", and configure per-UOM capacity from "Configure {{l('Slot')}}" in the sidebar.</span>
           </div>
 
           <div class="wt-setup-actions">
@@ -2956,6 +2965,7 @@ window.WarehouseTheatre3D = {
     // Mount Vue app
     setTimeout(()=>{
       const app = createApp(App);
+      Object.assign(app.config.globalProperties, { L, l });  // role labels in every template
       app.mount('#'+mountId);
     }, 80);
   }

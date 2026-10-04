@@ -156,3 +156,15 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 			["Building", "Floor", "Slot", "Level"],
 		)
 		self.assertGreaterEqual(setup_api.get_setup_summary().get("Level", 0), 1)
+
+	def test_role_labels_are_configurable(self):
+		"""WMS Settings > Location Labels renames what Warehouse 3D shows; a blank label keeps the role name."""
+		settings = frappe.get_single("WMS Settings")
+		settings.update({"label_floor": "Pillar", "label_slot": " Bay ", "label_building": ""})
+		settings.save()
+		labels = api.get_user_access()["labels"]
+		self.assertEqual(
+			(labels["Floor"], labels["Slot"], labels["Building"], labels["Level"]),
+			("Pillar", "Bay", "Building", "Level"),
+		)
+		self.assertEqual(set(labels), set(api.ROLES))

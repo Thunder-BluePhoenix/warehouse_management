@@ -397,7 +397,14 @@ def get_user_access():
 		"can_view": can_view(),
 		"can_edit": can_edit(),
 		"setup_complete": bool(frappe.db.exists("Warehouse", {"wt_warehouse_type": ["is", "set"]})),
+		"labels": role_labels(),
 	}
+
+
+def role_labels():
+	"""{role: the name to show for it}. WMS Settings > Location Labels; a blank label shows the role itself."""
+	settings = frappe.get_cached_doc("WMS Settings")
+	return {role: (settings.get(f"label_{role.lower()}") or "").strip() or role for role in ROLES}
 
 
 # ─────────────────────────────────────────────────────────────
