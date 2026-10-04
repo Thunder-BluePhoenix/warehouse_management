@@ -25,7 +25,12 @@
   "label_zone",
   "column_break_location_labels",
   "label_slot",
-  "label_level"
+  "label_level",
+  "view_3d_section",
+  "bay_fill",
+  "warehouse_fields",
+  "column_break_view_3d",
+  "serial_no_fields"
  ],
  "fields": [
   {
@@ -148,11 +153,40 @@
    "fieldtype": "Data",
    "label": "Level Label",
    "placeholder": "Level"
+  },
+  {
+   "fieldname": "view_3d_section",
+   "fieldtype": "Section Break",
+   "label": "Warehouse 3D Display"
+  },
+  {
+   "fieldname": "bay_fill",
+   "fieldtype": "Select",
+   "label": "Slot Colour",
+   "options": "Fullest Level\nShare of Levels Used",
+   "default": "Fullest Level",
+   "description": "Fullest Level: a slot takes the colour of its fullest level (racks). Share of Levels Used: amber while any level is free, red only when all are full (stacks of single items, such as vehicles)."
+  },
+  {
+   "fieldname": "warehouse_fields",
+   "fieldtype": "Small Text",
+   "label": "Warehouse Fields to Show",
+   "description": "Fieldnames of Warehouse, one per line, shown for the selected level and its slot in the side panel (for example fields added by another app)."
+  },
+  {
+   "fieldname": "column_break_view_3d",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "serial_no_fields",
+   "fieldtype": "Small Text",
+   "label": "Serial No Fields to Show",
+   "description": "Fieldnames of Serial No, one per line, shown with each serial number on a level (for example a registration number)."
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-04 12:00:00.000000",
+ "modified": "2026-10-05 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Warehouse Management System",
  "name": "WMS Settings",

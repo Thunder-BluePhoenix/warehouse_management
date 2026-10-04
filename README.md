@@ -84,3 +84,24 @@ gpl-3.0
 
 3D/2D storage visualization of the ERPNext Warehouse tree (Building → Floor → Zone → Slot → Level).
 Open it from the desk at `/app/warehouse-3d` or standalone at `/warehouse-3d`. Requires ERPNext.
+
+#### Display settings (WMS Settings)
+
+- **Location Labels:** the name shown for each role, e.g. Area, Pillar, Bay and Level for a vehicle yard. Only the displayed name changes; the stored role (`wt_warehouse_type`) does not.
+- **Slot Colour:**
+  - **Fullest Level** (the default) colours a slot by its fullest level, as for racks.
+  - **Share of Levels Used** keeps it amber while any level is free and turns it red only when all are full. Use this for stacks of single items, such as vehicles.
+- **Warehouse Fields to Show:** Warehouse fieldnames, one per line, shown in the side panel for the selected level and its slot.
+- **Serial No Fields to Show:** Serial No fieldnames, one per line, shown with each serial number on a level (for example a registration number). A level holding a single serial shows it, or its first listed field, instead of a quantity.
+
+#### Extending it from another app (hooks)
+
+- **`wm_location_search`:** each listed function is called as `fn(query)` and returns extra search hits:
+  `[{"kind", "ref", "item", "warehouse", "qty"}]`. The viewer keeps only hits in warehouses the user may see.
+- **`wm_location_badges`:** each listed function is called as `fn(levels, serials)`:
+  - `levels` is the list of level warehouses on screen;
+  - `serials` is `{level: [serial numbers on it]}`.
+
+  It returns `{level: [{"label", "color"}]}`, where `color` is red, orange, blue or green. The badges show on the 2D level rows, in the side panel and in the level pop-up.
+
+Location search is built in: any 3D-managed warehouse by name, closest match first.

@@ -29,7 +29,18 @@ function lvHasStock(lv) { return (lv.uoms||[]).some(u=>u.qty>0); }
 function fillText(lv) { const p=lvFill(lv); return !lvHasStock(lv)&&!p ? 'Empty' : p==null ? 'No capacity' : p+'%'; }
 function slotFill(sl) {
   const known = sl.levels.map(lvFill).filter(p=>p!=null);
-  return known.length ? Math.max(...known) : null;
+  if (!known.length) return null;
+  if (store.bayFill !== 'Share of Levels Used') return Math.max(...known);  // racks: the fullest level
+  // stacks of single items (WMS Settings > Slot Colour): amber while any level is free, red only when all are full
+  // ponytail: the share is shown through the existing colour bands (70-89 % reads as amber)
+  const share = known.reduce((a, p) => a + Math.min(p, 100), 0) / known.length;
+  return share >= 100 ? Math.max(...known) : share > 0 ? Math.min(89, Math.max(70, Math.round(share))) : 0;
+}
+// What is on a level, in a word: its single serial (or that serial's first shown field, e.g. a registration)
+function lvTag(lv) {
+  const sns = lv.serials || [];
+  if (sns.length !== 1) return '';
+  return (sns[0].fields && sns[0].fields.length) ? sns[0].fields[0].value : sns[0].sn;
 }
 function hasStock(sl) { return sl.levels.some(lvHasStock); }
 // Quantities in different UOMs are never added together: {Nos: 12, Kg: 340}
@@ -376,6 +387,7 @@ const CSS = `
 .wt-2d-tile.empty .wt-2d-tile-qty{color:var(--wt-border)}
 .wt-2d-tile-bar{position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 6px 6px}
 .wt-2d-levels{width:100%;margin-top:5px;display:flex;flex-direction:column;gap:3px}
+.wt-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;background:rgba(100,116,139,.2);color:#94a3b8;white-space:nowrap}.wt-badge.red{background:rgba(248,113,113,.18);color:#f87171}.wt-badge.orange{background:rgba(251,146,60,.18);color:#fb923c}.wt-badge.blue{background:rgba(96,165,250,.18);color:#60a5fa}.wt-badge.green{background:rgba(74,222,128,.18);color:#4ade80}
 .wt-2d-lv-row{display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:4px;background:rgba(255,255,255,.05);cursor:pointer;transition:background .12s}
 .wt-2d-lv-row:hover{background:rgba(255,255,255,.1)}
 #wt-app.light .wt-2d-lv-row{background:rgba(0,0,0,.04)}
@@ -619,6 +631,7 @@ const store = reactive({
   _aisleStartX: 0,
   canEdit: false,
   labels: {},
+  bayFill: 'Fullest Level',
   canView: true,
   // Manage Warehouses (CRUD)
   whManageOpen: false,
@@ -1235,6 +1248,7 @@ const actions = {
         store.canEdit = !!(access && access.can_edit);
         store.canView = !!(access && access.can_view);
         store.labels = (access && access.labels) || {};
+        store.bayFill = (access && access.bay_fill) || 'Fullest Level';
       } catch(e) {
         console.error('WT: access check failed', e);
         store.canEdit = false;
@@ -2001,6 +2015,11 @@ const DetailPanel = defineComponent({
         <div class="wt-dp-title">{{d.slot.label}} — {{d.lv.label}}</div>
         <div class="wt-dp-sub">{{zoneLabel(d.slot)}}{{d.lv.wh}} · {{fillText(d.lv)}}<span v-if="d.lv.bay_type"> · {{d.lv.bay_type}} bay</span><span v-if="d.lv.area"> · area {{fmt(d.lv.area)}}</span></div>
         <div v-if="d.lv.totes?.length" class="wt-dp-sub">🧺 {{d.lv.totes.length}} tote{{d.lv.totes.length>1?'s':''}}: {{d.lv.totes.join(', ')}}</div>
+        <div v-if="d.lv.badges?.length" class="wt-dp-sub"><span v-for="b in d.lv.badges" :key="b.label" :class="['wt-badge', b.color]" style="margin:0 4px 0 0">{{b.label}}</span></div>
+        <template v-if="(d.slot.details||[]).length || (d.lv.details||[]).length">
+          <span class="wt-dp-sec">Details</span>
+          <div v-for="(x,xi) in [...(d.slot.details||[]), ...(d.lv.details||[])]" :key="xi" class="wt-dp-sub">{{x.label}}: <b>{{x.value}}</b></div>
+        </template>
 
         <span class="wt-dp-sec">UOM fill</span>
         <div v-if="!d.lv.uoms?.length" style="font-size:10px;color:rgba(255,255,255,.3);margin-bottom:8px">No UOMs configured</div>
@@ -2022,6 +2041,15 @@ const DetailPanel = defineComponent({
         </template>
 
         <div class="wt-divider"></div>
+        <template v-if="d.lv.serials?.length">
+          <span class="wt-dp-items-lbl">Serial Nos ({{d.lv.serials.length}})</span>
+          <div v-for="x in d.lv.serials" :key="x.sn" class="wt-dp-item">
+            <div>
+              <div class="wt-dp-icode">{{x.sn}}</div>
+              <div class="wt-dp-imeta">{{x.item}}<span v-for="f in x.fields" :key="f.label"> · {{f.label}}: {{f.value}}</span></div>
+            </div>
+          </div>
+        </template>
         <span class="wt-dp-items-lbl">Items in {{l('Level')}}</span>
         <div v-if="!d.lv.items?.length" style="font-size:10px;color:rgba(255,255,255,.3)">No stock</div>
         <div v-for="it in (d.lv.items||[])" :key="it.c+'|'+(it.t||'')" class="wt-dp-item">
@@ -2115,6 +2143,11 @@ const ItemModal = defineComponent({
           <div v-if="truncated" style="margin-bottom:10px;font-size:12px;color:#4a5568">
             Showing the top {{items.length}} of {{itemCount}} items (totals cover the rows shown).
             <button class="wt-im-lvtab" style="margin-left:6px" @click="actions.loadAllItems(lv.wh)">Show all {{itemCount}}</button>
+          </div>
+          <div v-if="lv && lv.serials && lv.serials.length" style="margin-bottom:10px;font-size:12px;color:#4a5568">
+            <b>Serial Nos:</b>
+            <span v-for="(x,xi) in lv.serials" :key="x.sn">{{xi?', ':' '}}<b>{{x.sn}}</b><span v-for="f in x.fields" :key="f.label"> ({{f.label}}: {{f.value}})</span></span>
+            <span v-for="b in (lv.badges||[])" :key="b.label" :class="['wt-badge', b.color]">{{b.label}}</span>
           </div>
           <div class="wt-im-tbl-wrap">
             <table id="wt-im-tbl">
@@ -2579,7 +2612,7 @@ const View2D = defineComponent({
     function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
     function lvQty(lv){ return fmtUoms(qtyByUom([lv]), 1); }
 
-    return { store, sections, tileCls, tileQty, lvColor, lvQty, actions, fmtK, fmt, FCH, slotFill, hasStock, lvHasStock, zoneLabel, fmtUoms, qtyByUom };
+    return { store, sections, tileCls, tileQty, lvColor, lvQty, lvTag, actions, fmtK, fmt, FCH, slotFill, hasStock, lvHasStock, zoneLabel, fmtUoms, qtyByUom };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
@@ -2607,9 +2640,11 @@ const View2D = defineComponent({
                     @click.stop="actions.open2DModalLevel(sl.wh, lv.wh)">
                     <div class="wt-2d-lv-dot" :style="{background:lvColor(lv)}"></div>
                     <div class="wt-2d-lv-name">{{lv.label.split('/').pop()}}</div>
-                    <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}">
-                      {{lvHasStock(lv)?lvQty(lv):'—'}}
+                    <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}"
+                      :title="(lv.serials||[]).map(x=>x.sn).join(', ')">
+                      {{lvHasStock(lv)?(lvTag(lv)||lvQty(lv)):'—'}}
                     </div>
+                    <span v-for="b in (lv.badges||[])" :key="b.label" :class="['wt-badge', b.color]">{{b.label}}</span>
                   </div>
                 </div>
                 <div class="wt-2d-tile-bar" :style="{background:hasStock(sl)?FCH(slotFill(sl)):'transparent'}"></div>

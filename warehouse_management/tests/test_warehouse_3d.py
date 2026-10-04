@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -168,3 +169,63 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 			("Pillar", "Bay", "Building", "Level"),
 		)
 		self.assertEqual(set(labels), set(api.ROLES))
+
+	def test_level_extras_from_settings_and_hooks(self):
+		"""Serial numbers with the configured fields, Warehouse fields to show, and what other apps add through the
+		wm_location_badges and wm_location_search hooks (faked here, so the test needs no other app)."""
+		floor = self._make("_WT X Floor", "Floor", parent=self._make("_WT X Building", "Building").name)
+		slot = self._make("_WT X Slot", "Slot", parent=floor.name)
+		level = self._make("_WT X Slot-L0", "Level", is_group=0, parent=slot.name)
+		item = frappe.db.get_value("Item", {"has_serial_no": 1, "is_stock_item": 1}) or frappe.get_doc(
+			doctype="Item", item_code="_WT Serial Item", item_group="All Item Groups", stock_uom="Nos",
+			is_stock_item=1, has_serial_no=1,
+		).insert().name  # fmt: skip
+		sn = frappe.get_doc(
+			doctype="Serial No", serial_no=f"_WT-SN-{frappe.generate_hash(length=6)}", item_code=item
+		).insert()
+		sn.db_set("warehouse", level.name)
+		settings = frappe.get_single("WMS Settings")
+		settings.update(
+			{
+				"serial_no_fields": "item_name",
+				"warehouse_fields": "warehouse_name",
+				"bay_fill": "Share of Levels Used",
+			}
+		)
+		settings.save()
+		FAKE_HITS[:] = [{"kind": "Fake", "ref": "X-1", "item": None, "warehouse": level.name, "qty": 1}]
+
+		hooks = {
+			"wm_location_badges": [f"{__name__}.fake_badges"],
+			"wm_location_search": [f"{__name__}.fake_search"],
+		}
+		real = frappe.get_hooks
+		with patch(
+			"frappe.get_hooks",
+			side_effect=lambda hook=None, *a, **kw: hooks.get(hook) or real(hook, *a, **kw),
+		):
+			(found,) = api.get_slots(floor.name)
+			hits = api.find_locations("_WT X Slot")
+		lv = found["levels"][0]
+		self.assertEqual([x["sn"] for x in lv["serials"]], [sn.name])
+		self.assertEqual(lv["serials"][0]["fields"][0]["label"], "Item Name")
+		self.assertEqual(lv["badges"], [{"label": "Held", "color": "orange"}])
+		self.assertEqual(lv["details"], [{"label": "Warehouse Name", "value": "_WT X Slot-L0"}])
+		self.assertEqual(found["details"], [{"label": "Warehouse Name", "value": "_WT X Slot"}])
+		self.assertEqual(hits[0]["ref"], slot.name)  # the closest location first
+		self.assertIn(("Fake", "X-1"), [(h["kind"], h["ref"]) for h in hits])
+		self.assertEqual(api.get_user_access()["bay_fill"], "Share of Levels Used")
+
+		settings.serial_no_fields = "no_such_field"
+		self.assertRaises(frappe.ValidationError, settings.save)
+
+
+FAKE_HITS = []
+
+
+def fake_badges(levels, serials):
+	return {lv: [{"label": "Held", "color": "orange"}] for lv, names in serials.items() if names}
+
+
+def fake_search(query):
+	return FAKE_HITS
