@@ -106,7 +106,9 @@ jinja = {
 # ------------
 
 # before_install = "warehouse_management.install.before_install"
-# after_install = "warehouse_management.install.after_install"
+after_install = (
+	"warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings.ensure_default"
+)
 
 # Uninstallation
 # ------------

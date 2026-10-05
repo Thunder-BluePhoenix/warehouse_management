@@ -5,7 +5,11 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt
 
-from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import fieldnames
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import (
+	fieldnames,
+	settings_for,
+	settings_names,
+)
 
 # Security model (see docs/research/areas/11-codebase-platform.md §6.3):
 # - access comes from ERPNext's own permissions (Role Permission Manager), not a hard-coded role list:
@@ -80,6 +84,7 @@ EXTRA_FIELDS = (
 	"wt_length",
 	"wt_breadth",
 	"wt_split_from",
+	"custom_wms_settings",
 )
 
 
@@ -157,7 +162,11 @@ def get_warehouse_groups(company: str | None = None):
 		"AND w.disabled = 0 " + company_filter + "ORDER BY pw.warehouse_name, w.warehouse_name"
 	)
 	allowed = _permitted_warehouses()
-	return [r for r in frappe.db.sql(query, params, as_dict=True) if r.id in allowed]
+	groups = [r for r in frappe.db.sql(query, params, as_dict=True) if r.id in allowed]
+	ws = settings_names([g.id for g in groups])
+	for g in groups:
+		g["ws"] = ws.get(g.id)  # the WMS Settings it follows: its labels and slot colour
+	return groups
 
 
 @frappe.whitelist()
@@ -203,7 +212,9 @@ def get_slots(group_warehouse: str):
 	levels = _levels_by_slot([sl["wh"] for sl in slots], allowed)
 	# WMS Settings > Warehouse Fields to Show, for every slot and level in one query
 	details = _details([sl["wh"] for sl in slots] + [lv["wh"] for lvs in levels.values() for lv in lvs])
+	ws = settings_names([sl["wh"] for sl in slots])
 	for sl in slots:
+		sl["ws"] = ws.get(sl["wh"])
 		sl["levels"] = levels.get(sl["wh"], [])
 		sl["details"] = details.get(sl["wh"], [])
 		for lv in sl["levels"]:
@@ -352,14 +363,15 @@ def _level_extras(levels):
 	the badges other apps add through the `wm_location_badges` hook."""
 	if not levels:
 		return {}
-	sn_fields = fieldnames(frappe.get_cached_doc("WMS Settings").serial_no_fields)
+	sn_fields = _fields_by_warehouse(levels, "serial_no_fields")
+	all_fields = sorted({f for fs in sn_fields.values() for f in fs})
 	meta = frappe.get_meta("Serial No")
 	out = {lv: {"serials": [], "badges": []} for lv in levels}
 	if frappe.has_permission("Serial No", "read"):
 		for sn in frappe.get_all(
 			"Serial No",
 			filters={"warehouse": ["in", levels]},
-			fields=["name", "item_code", "warehouse", *sn_fields],
+			fields=["name", "item_code", "warehouse", *all_fields],
 			order_by="name",
 			limit_page_length=SERIALS_PER_FLOOR,
 		):
@@ -368,7 +380,9 @@ def _level_extras(levels):
 					"sn": sn.name,
 					"item": sn.item_code,
 					"fields": [
-						{"label": _(meta.get_label(f)), "value": sn.get(f)} for f in sn_fields if sn.get(f)
+						{"label": _(meta.get_label(f)), "value": sn.get(f)}
+						for f in sn_fields[sn.warehouse]
+						if sn.get(f)
 					],
 				}
 			)
@@ -382,20 +396,31 @@ def _level_extras(levels):
 
 def _details(warehouses):
 	"""{warehouse: [{label, value}]} for WMS Settings > Warehouse Fields to Show; empty values are left out."""
-	wh_fields = fieldnames(frappe.get_cached_doc("WMS Settings").warehouse_fields)
-	if not wh_fields or not warehouses:
+	wh_fields = _fields_by_warehouse(warehouses, "warehouse_fields")
+	all_fields = sorted({f for fs in wh_fields.values() for f in fs})
+	if not all_fields:
 		return {}
 	meta = frappe.get_meta("Warehouse")
 	return {
 		w.name: [
 			{"label": _(meta.get_label(f)), "value": w.get(f)}
-			for f in wh_fields
+			for f in wh_fields[w.name]
 			if w.get(f) not in (None, "", 0)
 		]
 		for w in frappe.get_all(
-			"Warehouse", filters={"name": ["in", warehouses]}, fields=["name", *wh_fields]
+			"Warehouse", filters={"name": ["in", warehouses]}, fields=["name", *all_fields]
 		)
 	}
+
+
+def _fields_by_warehouse(warehouses, setting):
+	"""{warehouse: the fieldnames listed in `setting` of the WMS Settings it follows}."""
+	ws = settings_names(warehouses)
+	return {w: fieldnames(settings_for_name(ws.get(w)).get(setting)) for w in warehouses}
+
+
+def settings_for_name(name):
+	return frappe.get_cached_doc("WMS Settings", name) if name else settings_for()
 
 
 @frappe.whitelist(methods=["POST"])
@@ -460,14 +485,22 @@ def get_user_access():
 		"can_view": can_view(),
 		"can_edit": can_edit(),
 		"setup_complete": bool(frappe.db.exists("Warehouse", {"wt_warehouse_type": ["is", "set"]})),
-		"labels": role_labels(),
-		"bay_fill": frappe.get_cached_doc("WMS Settings").bay_fill or "Fullest Level",
+		# every WMS Settings by name; each group, slot and warehouse row says which one it follows ("ws")
+		"profiles": {
+			s.name: {"labels": _labels(s), "bay_fill": s.bay_fill or "Fullest Level"}
+			for s in frappe.get_all("WMS Settings", fields=["*"])
+		},
+		"default": settings_for().name,
 	}
 
 
-def role_labels():
-	"""{role: the name to show for it}. WMS Settings > Location Labels; a blank label shows the role itself."""
-	settings = frappe.get_cached_doc("WMS Settings")
+def role_labels(warehouse=None):
+	"""{role: the name to show for it} in the WMS Settings `warehouse` follows (Location Labels); a blank label shows
+	the role itself."""
+	return _labels(settings_for(warehouse))
+
+
+def _labels(settings):
 	return {role: (settings.get(f"label_{role.lower()}") or "").strip() or role for role in ROLES}
 
 
@@ -532,7 +565,7 @@ def get_warehouse_manage_list(company: str | None = None):
 	"""Full warehouse list (all theatre roles, incl. disabled) for the Manage Warehouses panel."""
 	_require_edit_permission()
 	filters = {"company": company} if company else {}
-	return frappe.get_list(
+	rows = frappe.get_list(
 		"Warehouse",
 		filters=filters,
 		fields=[
@@ -547,6 +580,10 @@ def get_warehouse_manage_list(company: str | None = None):
 		order_by="disabled asc, wt_warehouse_type asc, warehouse_name asc",
 		limit_page_length=0,
 	)
+	ws = settings_names([r.name for r in rows])
+	for r in rows:
+		r["ws"] = ws.get(r.name)
+	return rows
 
 
 @frappe.whitelist()
@@ -571,6 +608,7 @@ def get_warehouse_detail(warehouse: str):
 		],
 		**{field: doc.get(field) for field in EXTRA_FIELDS},
 		"wt_area": doc.get("wt_area"),
+		"ws": settings_names([doc.name]).get(doc.name),
 	}
 
 

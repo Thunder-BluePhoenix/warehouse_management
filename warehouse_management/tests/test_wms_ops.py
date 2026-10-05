@@ -7,18 +7,19 @@ from frappe.utils import add_days, nowdate
 from warehouse_management.api import scan
 from warehouse_management.api import warehouse_3d as api
 from warehouse_management.tests.test_wm_features import WMTestCase
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import settings_for
 
 
 class TestWmsOperations(WMTestCase):
 	"""Totes, WMS Settings, splitting an area, and the scan screen's put-away and picking."""
 
 	def settings(self, **values):
-		doc = frappe.get_doc("WMS Settings")
+		doc = settings_for()  # the default, which the test warehouses follow
 		before = {k: doc.get(k) for k in values}
 		doc.update(values)
 		doc.save()
 		# restore by saving again, which also refreshes the cached settings
-		self.addCleanup(lambda: frappe.get_doc("WMS Settings").update(before).save())
+		self.addCleanup(lambda: frappe.get_doc("WMS Settings", doc.name).update(before).save())
 
 	def two_slots(self, prefix, **level_extra):
 		floor, slot, (level, _other) = self.floor_with_levels(prefix, **level_extra)

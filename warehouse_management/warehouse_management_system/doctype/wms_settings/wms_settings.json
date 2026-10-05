@@ -1,10 +1,13 @@
 {
  "actions": [],
- "allow_rename": 0,
+ "allow_rename": 1,
  "creation": "2026-09-25 18:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "settings_name",
+  "column_break_name",
+  "is_default",
   "storage_rules_section",
   "enforce_weight_block",
   "column_break_rules",
@@ -33,6 +36,26 @@
   "serial_no_fields"
  ],
  "fields": [
+  {
+   "fieldname": "settings_name",
+   "fieldtype": "Data",
+   "label": "Name",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "description": "For example a site, a building or a use such as Vehicle Yard."
+  },
+  {
+   "fieldname": "column_break_name",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_default",
+   "fieldtype": "Check",
+   "label": "Default",
+   "in_list_view": 1,
+   "description": "Used by every warehouse that has no WMS Settings of its own or on a parent. A warehouse picks its settings on its WMS Settings field; its child warehouses follow it unless they pick their own."
+  },
   {
    "fieldname": "storage_rules_section",
    "fieldtype": "Section Break",
@@ -186,7 +209,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-10-05 18:00:00.000000",
+ "modified": "2026-10-05 20:00:00.000000",
  "modified_by": "Administrator",
  "module": "Warehouse Management System",
  "name": "WMS Settings",
@@ -218,9 +241,11 @@
    "role": "Stock User"
   }
  ],
- "sort_field": "creation",
- "sort_order": "DESC",
+ "sort_field": "settings_name",
+ "sort_order": "ASC",
  "states": [],
- "issingle": 1,
- "track_changes": 1
+ "track_changes": 1,
+ "autoname": "field:settings_name",
+ "naming_rule": "By fieldname",
+ "title_field": "settings_name"
 }

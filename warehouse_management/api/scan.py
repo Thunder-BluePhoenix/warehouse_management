@@ -10,6 +10,7 @@ from frappe import _
 from frappe.utils import flt
 
 from warehouse_management.api.warehouse_3d import _locate, _require_view_permission
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import settings_for
 from warehouse_management.warehouse_rules import location_of, validate_location
 
 
@@ -405,7 +406,9 @@ def _short_against_orders(pick):
 
 def _tell_customers(pick, short):
 	"""A comment on each Sales Order with a short pick, and (if enabled) an email to its contact."""
-	send = frappe.get_cached_doc("WMS Settings").notify_customer_on_short_pick
+	# ponytail: a pick follows the settings of its first location; split per location if picks span sites
+	first = pick.get("locations")[0].warehouse if pick.get("locations") else pick.get("parent_warehouse")
+	send = settings_for(first).notify_customer_on_short_pick
 	by_order = {}
 	for line in short:
 		if line["sales_order"]:

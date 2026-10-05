@@ -15,7 +15,7 @@ A storage layer on top of ERPNext's Warehouse tree and stock ledger. It works on
 **Rules on stock postings** (Stock Entry, Purchase Receipt, Purchase Invoice, Stock Reconciliation):
 - **Bay Type**: an Item with a *Required Bay Type* may only go into levels of that type.
 - **Weight limit** per level in kg (from the item's weight or kg UOM), with *Warn* or *Block*.
-- **WMS Settings** can switch every Block to a warning (alarm mode) and add an early alarm at a chosen % of the limit.
+- **WMS Settings** (per warehouse, see below) can switch every Block to a warning (alarm mode) and add an early alarm at a chosen % of the limit.
 
 **Totes (Storage Bin).** A movable, barcoded box with its own warehouse, so its contents are ordinary ERPNext stock. To move a tote, scan it and then its new location; no stock entry is needed, and every move is logged (Storage Bin Movement). Tote contents count at the tote's level for the 3D view, search and the rules above.
 
@@ -84,6 +84,15 @@ gpl-3.0
 
 3D/2D storage visualization of the ERPNext Warehouse tree (Building → Floor → Zone → Slot → Level).
 Open it from the desk at `/app/warehouse-3d` or standalone at `/warehouse-3d`. Requires ERPNext.
+
+#### WMS Settings per warehouse
+
+WMS Settings is a list: one record per use, e.g. *Default* and *Vehicle Yard*. A warehouse picks one on its **WMS Settings** field (desk form or Manage Warehouses).
+- **Which settings apply:** a warehouse follows its own WMS Settings, else its nearest parent's, else the one marked **Default**.
+- **Example:** in a tree A › B › C › D with settings on A and C, A and B follow A's settings and C and D follow C's.
+- **What follows it:** every setting below, plus the weight block and alarm, hold minutes, the short-pick email (by the pick's first location) and the label size.
+- **Exception:** the scan screen's default put-away source is read from the Default record.
+- **For code:** `settings_for(warehouse)` and `settings_names(warehouses)` in `wms_settings.py`.
 
 #### Display settings (WMS Settings)
 

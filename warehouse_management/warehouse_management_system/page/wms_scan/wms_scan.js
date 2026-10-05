@@ -100,9 +100,12 @@ class WmsScan {
 		});
 		this.qty.set_value(1);
 
-		frappe.db.get_single_value("WMS Settings", "default_putaway_source").then((wh) => {
-			if (wh && !this.source_field.get_value()) this.source_field.set_value(wh);
-		});
+		frappe.db
+			.get_value("WMS Settings", { is_default: 1 }, "default_putaway_source")
+			.then(({ message }) => {
+				const wh = message && message.default_putaway_source;
+				if (wh && !this.source_field.get_value()) this.source_field.set_value(wh);
+			});
 		this.set_mode("putaway");
 	}
 

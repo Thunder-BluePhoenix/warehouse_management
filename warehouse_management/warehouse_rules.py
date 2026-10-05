@@ -9,6 +9,7 @@ from frappe import _
 from frappe.utils import flt
 
 from warehouse_management.api.warehouse_3d import TOTE, kg_per_unit, totes_at
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import settings_for
 
 # Incoming stock rows per voucher: (child table, target warehouse field, stock-qty field)
 INCOMING = {
@@ -107,9 +108,9 @@ def check_bay_type(item, item_code, rule, where):
 
 
 def check_weight(rule, after):
-	"""Above the limit: refuse (Block, while WMS Settings enforce it) or warn. Near it: warn at the alarm %."""
+	"""Above the limit: refuse (Block, while the level's WMS Settings enforce it) or warn. Near it: warn at the alarm %."""
 	limit = flt(rule.wt_max_weight_kg)
-	settings = frappe.get_cached_doc("WMS Settings")
+	settings = settings_for(rule.name)
 	if after > limit:
 		message = _("{0} would hold {1} kg, above its limit of {2} kg.").format(
 			frappe.bold(rule.name), frappe.bold(round(after, 1)), limit
