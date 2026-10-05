@@ -6,6 +6,11 @@ from frappe.tests import IntegrationTestCase
 
 from warehouse_management.api import warehouse_3d as api
 from warehouse_management.api import warehouse_3d_setup as setup_api
+from warehouse_management.api.warehouse_3d import role_labels
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import (
+	settings_for,
+	settings_names,
+)
 
 WRITE_ENDPOINTS = [
 	api.save_slot_position,
@@ -102,9 +107,10 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		api.save_uom_capacity(cap_only.name, "Kg", 500)
 
 		# 20 levels: the old per-level code ran ~66 queries here. The first call also loads metadata and UOM
-		# conversions (once per process/request); a warm call must run only the fixed floor queries.
+		# conversions (once per process/request); a warm call must run only the fixed floor queries (12, and 6 for
+		# which WMS Settings the slots and levels follow).
 		api.get_slots(floor.name)
-		with self.assertQueryCount(12):
+		with self.assertQueryCount(18):
 			result = api.get_slots(floor.name)
 
 		self.assertEqual([len(sl["levels"]) for sl in result], [4] * 5)
@@ -158,12 +164,48 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		)
 		self.assertGreaterEqual(setup_api.get_setup_summary().get("Level", 0), 1)
 
+	def _settings(self, name, **values):
+		if frappe.db.exists("WMS Settings", name):
+			return frappe.get_doc("WMS Settings", name).update(values).save()
+		return frappe.get_doc({"doctype": "WMS Settings", "settings_name": name, **values}).insert()
+
+	def test_settings_follow_the_nearest_parent(self):
+		"""A warehouse follows its own WMS Settings, else its nearest parent's, else the default: A > B > C > D with
+		settings on A and C gives A, A, C, C; with none, all four follow the default."""
+		a = self._make("_WT T A", "Building")
+		b = self._make("_WT T B", "Floor", parent=a.name)
+		c = self._make("_WT T C", "Zone", parent=b.name)
+		d = self._make("_WT T D", "Slot", parent=c.name)
+		chain = [w.name for w in (a, b, c, d)]
+		default = settings_for().name
+		self.assertEqual(list(settings_names(chain).values()), [default] * 4)
+
+		one, two = self._settings("_WT One", label_slot="Bay"), self._settings("_WT Two", label_slot="Rack")
+		frappe.db.set_value("Warehouse", a.name, "custom_wms_settings", one.name)
+		self.assertEqual([settings_names(chain)[w] for w in chain], [one.name] * 4)
+		frappe.db.set_value("Warehouse", c.name, "custom_wms_settings", two.name)
+		self.assertEqual([settings_names(chain)[w] for w in chain], [one.name, one.name, two.name, two.name])
+		self.assertEqual((role_labels(b.name)["Slot"], role_labels(d.name)["Slot"]), ("Bay", "Rack"))
+		self.assertEqual(settings_for(d.name).name, two.name)
+
+		(slot,) = [g for g in api.get_warehouse_manage_list() if g.name == d.name]
+		self.assertEqual(slot.ws, two.name)
+		self.assertRaises(frappe.ValidationError, two.delete)  # still used by C
+
+	def test_one_default(self):
+		"""Making a WMS Settings the default unsets the old one; the default cannot be deleted."""
+		old = settings_for().name
+		new = self._settings("_WT New Default", is_default=1)
+		self.addCleanup(lambda: frappe.get_doc("WMS Settings", old).update({"is_default": 1}).save())
+		self.assertEqual(
+			(settings_for().name, frappe.db.get_value("WMS Settings", old, "is_default")), (new.name, 0)
+		)
+		self.assertRaises(frappe.ValidationError, new.delete)
+
 	def test_role_labels_are_configurable(self):
 		"""WMS Settings > Location Labels renames what Warehouse 3D shows; a blank label keeps the role name."""
-		settings = frappe.get_single("WMS Settings")
-		settings.update({"label_floor": "Pillar", "label_slot": " Bay ", "label_building": ""})
-		settings.save()
-		labels = api.get_user_access()["labels"]
+		settings = self._settings("_WT Labels", label_floor="Pillar", label_slot=" Bay ", label_building="")
+		labels = api.get_user_access()["profiles"][settings.name]["labels"]
 		self.assertEqual(
 			(labels["Floor"], labels["Slot"], labels["Building"], labels["Level"]),
 			("Pillar", "Bay", "Building", "Level"),
@@ -187,15 +229,13 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 			company=self.company,
 		).insert()
 		sn.db_set("warehouse", level.name)
-		settings = frappe.get_single("WMS Settings")
-		settings.update(
-			{
-				"serial_no_fields": "item_name",
-				"warehouse_fields": "warehouse_name",
-				"bay_fill": "Share of Levels Used",
-			}
+		settings = self._settings(
+			"_WT Extras",
+			serial_no_fields="item_name",
+			warehouse_fields="warehouse_name",
+			bay_fill="Share of Levels Used",
 		)
-		settings.save()
+		frappe.db.set_value("Warehouse", floor.parent_warehouse, "custom_wms_settings", settings.name)
 		FAKE_HITS[:] = [{"kind": "Fake", "ref": "X-1", "item": None, "warehouse": level.name, "qty": 1}]
 
 		hooks = {
@@ -217,7 +257,8 @@ class TestWarehouse3DSecurity(IntegrationTestCase):
 		self.assertEqual(found["details"], [{"label": "Warehouse Name", "value": "_WT X Slot"}])
 		self.assertEqual(hits[0]["ref"], slot.name)  # the closest location first
 		self.assertIn(("Fake", "X-1"), [(h["kind"], h["ref"]) for h in hits])
-		self.assertEqual(api.get_user_access()["bay_fill"], "Share of Levels Used")
+		self.assertEqual(api.get_user_access()["profiles"][settings.name]["bay_fill"], "Share of Levels Used")
+		self.assertEqual(found["ws"], settings.name)
 
 		settings.serial_no_fields = "no_such_field"
 		self.assertRaises(frappe.ValidationError, settings.save)

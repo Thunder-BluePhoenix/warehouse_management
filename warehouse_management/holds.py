@@ -10,6 +10,8 @@ import frappe
 from frappe import _
 from frappe.utils import add_to_date, flt, now_datetime
 
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import settings_for
+
 
 def _active_holds(item_code, warehouses, exclude=None):
 	filters = {
@@ -94,7 +96,7 @@ def _active(name):
 @frappe.whitelist(methods=["POST"])
 def extend_hold(name: str | int, minutes: float | None = None):
 	hold = _active(name)
-	minutes = flt(minutes) or frappe.get_cached_doc("WMS Settings").hold_minutes or 5
+	minutes = flt(minutes) or settings_for(hold.warehouse).hold_minutes or 5
 	hold.db_set("expires_at", add_to_date(now_datetime(), minutes=minutes))
 	return {"name": hold.name, "expires_at": hold.expires_at}
 

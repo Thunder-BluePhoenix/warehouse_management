@@ -7,6 +7,7 @@ from frappe.model.document import Document
 from frappe.utils import add_to_date, flt, now_datetime
 
 from warehouse_management.holds import available_qty
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import settings_for
 
 
 class StockHold(Document):
@@ -21,7 +22,7 @@ class StockHold(Document):
 			return
 		self.status = "Active"
 		if not self.expires_at:
-			minutes = frappe.get_cached_doc("WMS Settings").hold_minutes or 5
+			minutes = settings_for(self.warehouse).hold_minutes or 5
 			self.expires_at = add_to_date(now_datetime(), minutes=minutes)
 		# locks the item's Bin row until commit, so two carts cannot both take the last units
 		available = available_qty(self.item_code, self.warehouse, lock=True)

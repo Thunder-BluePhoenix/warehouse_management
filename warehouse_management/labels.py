@@ -8,6 +8,7 @@ import pyqrcode
 from markupsafe import Markup
 
 from warehouse_management.api.warehouse_3d import _locate
+from warehouse_management.warehouse_management_system.doctype.wms_settings.wms_settings import settings_for
 
 
 def wm_qr_svg(value: str, size_mm: float = 30) -> Markup:
@@ -29,6 +30,6 @@ def wm_location_path(warehouse: str) -> str:
 	)
 
 
-def wm_label_size() -> frappe._dict:
-	settings = frappe.get_cached_doc("WMS Settings")
+def wm_label_size(warehouse: str | None = None) -> frappe._dict:
+	settings = settings_for(warehouse)
 	return frappe._dict(width=settings.label_width_mm or 100, height=settings.label_height_mm or 50)
