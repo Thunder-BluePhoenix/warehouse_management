@@ -1130,6 +1130,10 @@ class ThreeEngine {
       const vf=this.camera.fov*Math.PI/360, hf=Math.atan(Math.tan(vf)*(this.camera.aspect||1));
       const fit=Math.max((W/2)/Math.tan(hf), (D/2)/Math.tan(vf))*1.15;
       this.maxR=Math.max(this.maxR, fit*1.5); this.tR=fit;
+      // a tall narrow screen sits the camera further out than setExtent's fog: push the fog and far plane back
+      this.scene.fog.near=Math.max(this.scene.fog.near, fit*1.1);
+      this.scene.fog.far=Math.max(this.scene.fog.far, this.maxR*1.3);
+      this.camera.far=Math.max(this.camera.far, this.maxR*2); this.camera.updateProjectionMatrix();
     }
     this._startAnimate();
   }
