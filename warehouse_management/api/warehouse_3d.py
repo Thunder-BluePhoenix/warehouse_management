@@ -85,6 +85,10 @@ EXTRA_FIELDS = (
 	"wt_breadth",
 	"wt_split_from",
 	"custom_wms_settings",
+	"wt_pos_x",
+	"wt_pos_y",
+	"wt_rotation",
+	"wt_placed",
 )
 
 
@@ -169,13 +173,99 @@ def get_warehouse_groups(company: str | None = None):
 	return groups
 
 
+TREE_HIDDEN = ("Level", TOTE)  # too many to list; the 3D view shows them inside their slot
+
+
+@frappe.whitelist()
+def get_tree(parent: str | None = None, company: str | None = None):
+	"""One level of the warehouse tree for the left pane: the children of `parent`, or the top of the tree (warehouses
+	with no parent, or whose parent the user may not see). Disabled warehouses, levels and totes are left out. Each node
+	says whether it has children to open and, for a Floor, how many slots it holds."""
+	_require_view_permission()
+	allowed = _permitted_warehouses()
+	w = frappe.qb.DocType("Warehouse")
+	q = (
+		frappe.qb.from_(w)
+		.select(
+			w.name.as_("id"), w.warehouse_name.as_("label"), w.parent_warehouse.as_("parent"), w.is_group,
+			w.wt_warehouse_type.as_("type"), w.lft, w.rgt, w.company, w.wt_render_mode.as_("render_mode"),
+		)
+		.where((w.disabled == 0) & (w.wt_warehouse_type.isnull() | w.wt_warehouse_type.notin(TREE_HIDDEN)))
+		.orderby(w.lft)
+	)  # fmt: skip
+	if parent:
+		frappe.has_permission("Warehouse", "read", parent, throw=True)
+		q = q.where(w.parent_warehouse == parent)
+	elif company:
+		q = q.where(w.company == company)
+	rows = [r for r in q.run(as_dict=True) if r.id in allowed]
+	if not parent:  # the top: no parent, or a parent this user cannot see
+		rows = [r for r in rows if not r.parent or r.parent not in allowed]
+	if not rows:
+		return []
+	kids = dict(
+		frappe.db.sql(
+			"""SELECT parent_warehouse, COUNT(*) FROM `tabWarehouse`
+			WHERE parent_warehouse IN %(p)s AND disabled = 0 AND IFNULL(wt_warehouse_type, '') NOT IN %(hidden)s
+			GROUP BY parent_warehouse""",
+			{"p": tuple(r.id for r in rows), "hidden": TREE_HIDDEN},
+		)
+	)
+	slots = {}
+	floors = [r for r in rows if r.type == "Floor"]
+	if floors:  # slots under each floor, one query
+		for f in floors:
+			slots[f.id] = 0
+		for fid, n in frappe.db.sql(
+			"""SELECT f.name, COUNT(s.name) FROM `tabWarehouse` f
+			JOIN `tabWarehouse` s ON s.lft > f.lft AND s.rgt < f.rgt AND s.wt_warehouse_type = 'Slot' AND s.disabled = 0
+			WHERE f.name IN %(f)s GROUP BY f.name""",
+			{"f": tuple(f.id for f in floors)},
+		):
+			slots[fid] = n
+	ws = settings_names([r.id for r in rows])
+	return [
+		{
+			"id": r.id,
+			"label": r.label,
+			"type": r.type or "",
+			"is_group": r.is_group,
+			"children": kids.get(r.id, 0),
+			"slot_count": slots.get(r.id),
+			"render_mode": r.render_mode or "Rack",
+			"company": r.company,
+			"ws": ws.get(r.id),
+		}
+		for r in rows
+	]
+
+
+@frappe.whitelist()
+def get_path(warehouse: str):
+	"""The warehouses from the top of the tree down to `warehouse`'s parent, so the left pane can open them."""
+	_require_view_permission()
+	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
+	b = _floor_bounds(warehouse)
+	allowed = _permitted_warehouses()
+	return [
+		n
+		for n in frappe.get_all(
+			"Warehouse", {"lft": ["<", b.lft], "rgt": [">", b.rgt]}, pluck="name", order_by="lft"
+		)
+		if n in allowed
+	]
+
+
 @frappe.whitelist()
 def get_slots(group_warehouse: str):
 	"""Return all Slot warehouses under a Floor, with their levels."""
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", group_warehouse, throw=True)
-	allowed = _permitted_warehouses()
-	bounds = _floor_bounds(group_warehouse)
+	return _slots_of(group_warehouse, _permitted_warehouses())
+
+
+def _slots_of(floor, allowed):
+	bounds = _floor_bounds(floor)
 	slots = frappe.db.sql(
 		"""
 		SELECT
@@ -184,7 +274,9 @@ def get_slots(group_warehouse: str):
 			w.lft, w.rgt,
 			COALESCE(w.wt_row, 0)     AS `row`,
 			COALESCE(w.wt_col, 0)     AS col,
-			COALESCE(w.wt_row_gap, 0) AS row_gap
+			COALESCE(w.wt_row_gap, 0) AS row_gap,
+			IF(w.wt_placed, w.wt_pos_x, NULL) AS x, IF(w.wt_placed, w.wt_pos_y, NULL) AS y,
+			w.wt_length AS length, w.wt_breadth AS breadth
 		FROM `tabWarehouse` w
 		WHERE w.lft > %(lft)s AND w.rgt < %(rgt)s
 		  AND w.wt_warehouse_type = 'Slot'
@@ -221,6 +313,80 @@ def get_slots(group_warehouse: str):
 			lv["details"] = details.get(lv["wh"], [])
 
 	return slots
+
+
+MAP_FLOORS = 60  # ponytail: a map draws at most this many floors' racks; past it, the floors show as outlines
+
+
+@frappe.whitelist()
+def get_map(warehouse: str):
+	"""Everything under `warehouse` for the map view: each warehouse with its position (X, Y in metres from its parent's
+	corner), size (length, breadth) and rotation, and every Floor's slots with their levels and stock, so the whole
+	site is drawn in place. Levels and totes are inside their slots; disabled warehouses are left out."""
+	_require_view_permission()
+	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
+	allowed = _permitted_warehouses()
+	b = _floor_bounds(warehouse)
+	nodes = frappe.db.sql(
+		"""
+		SELECT w.name AS id, w.warehouse_name AS label, w.parent_warehouse AS parent, w.is_group,
+			w.wt_warehouse_type AS type, COALESCE(w.wt_render_mode, 'Rack') AS render_mode,
+			IF(w.wt_placed, w.wt_pos_x, NULL) AS x, IF(w.wt_placed, w.wt_pos_y, NULL) AS y,
+			w.wt_length AS length, w.wt_breadth AS breadth, COALESCE(w.wt_rotation, '0') AS rotation
+		FROM `tabWarehouse` w
+		WHERE w.lft >= %(lft)s AND w.rgt <= %(rgt)s AND w.disabled = 0
+			AND IFNULL(w.wt_warehouse_type, '') NOT IN %(hidden)s
+		ORDER BY w.lft
+	""",
+		{"lft": b.lft, "rgt": b.rgt, "hidden": TREE_HIDDEN},
+		as_dict=True,
+	)
+	nodes = [n for n in nodes if n.id in allowed]
+	ids = {n.id for n in nodes}
+	floors = [n.id for n in nodes if n.type == "Floor"]
+	inside = set()  # what a floor draws itself: its zones and slots are not separate blocks of the map
+	for f in floors:
+		fb = _floor_bounds(f)
+		inside.update(frappe.get_all("Warehouse", {"lft": [">", fb.lft], "rgt": ["<", fb.rgt]}, pluck="name"))
+	nodes = [n for n in nodes if n.id not in inside and (n.id == warehouse or n.parent in ids)]
+	ws = settings_names([n.id for n in nodes])
+	for n in nodes:
+		n["ws"] = ws.get(n.id)
+	return {
+		"root": warehouse,
+		"nodes": nodes,
+		"slots": {f: _slots_of(f, allowed) for f in floors[:MAP_FLOORS]},
+		"too_many": len(floors) > MAP_FLOORS,
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_positions(positions: str | list):
+	"""Save the map editor's layout: [{warehouse, x, y, length, breadth, rotation}] (metres). Each warehouse is saved
+	through the document, so its permissions and Version history apply."""
+	_require_edit_permission()
+	positions = json.loads(positions) if isinstance(positions, str) else positions
+	saved = []
+	for p in positions or []:
+		doc = _get_doc_for_write(p["warehouse"])
+		for key, field in (
+			("x", "wt_pos_x"),
+			("y", "wt_pos_y"),
+			("length", "wt_length"),
+			("breadth", "wt_breadth"),
+		):
+			if key in p:
+				value = _flt(p[key])
+				if key in ("length", "breadth") and value < 0:
+					frappe.throw(_("{0}: {1} cannot be negative.").format(doc.name, key))
+				doc.set(field, round(value, 2))
+		if "x" in p or "y" in p:
+			doc.wt_placed = 1  # from now on the map keeps it where it was put
+		if "rotation" in p:
+			doc.wt_rotation = "90" if str(p["rotation"]) == "90" else "0"
+		doc.save()
+		saved.append(doc.name)
+	return {"saved": saved}
 
 
 def _levels_by_slot(slot_names, allowed):
@@ -523,8 +689,12 @@ def _set_uom_capacities(doc, rows):
 
 def _set_extra_fields(doc, data):
 	for field in EXTRA_FIELDS:
-		if field in data:
+		if field in data and field != "wt_placed":
 			doc.set(field, data.get(field) or None)
+	if (
+		"wt_pos_x" in data or "wt_pos_y" in data
+	):  # a position typed on the form places it on the map; both blank: auto
+		doc.wt_placed = int(any(data.get(f) not in (None, "") for f in ("wt_pos_x", "wt_pos_y")))
 
 
 @frappe.whitelist()

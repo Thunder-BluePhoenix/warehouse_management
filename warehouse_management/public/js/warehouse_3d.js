@@ -130,9 +130,12 @@ const CSS = `
 #wt-app.dark{--wt-bg:#0c0e14;--wt-bg2:#13151e;--wt-bg3:#1a1e2a;--wt-border:rgba(255,255,255,.08);--wt-text:#fff;--wt-text2:rgba(255,255,255,.6);--wt-text3:rgba(255,255,255,.3);--wt-sb:rgba(10,12,18,.96);--wt-card:rgba(255,255,255,.04);--wt-cb:rgba(255,255,255,.08);--wt-accent:#3b82f6;--wt-accent2:#60a5fa;--wt-pill:rgba(255,255,255,.06);--wt-pillb:rgba(255,255,255,.1);--wt-floor:0x0a0c12;--wt-grid:#181c28}
 #wt-app.light{--wt-bg:#f0f2f5;--wt-bg2:#fff;--wt-bg3:#f7f9fc;--wt-border:#e2e8f0;--wt-text:#1a202c;--wt-text2:#4a5568;--wt-text3:#a0aec0;--wt-sb:#fff;--wt-card:#fff;--wt-cb:#e2e8f0;--wt-accent:#2563eb;--wt-accent2:#3b82f6;--wt-pill:#eff6ff;--wt-pillb:#dbeafe;--wt-floor:0xf0f2f5;--wt-grid:#dde1e7}
 #wt-app{width:100%;height:100%;display:flex;flex-direction:column;background:var(--wt-bg);font-family:-apple-system,"Inter",sans-serif;font-size:12px;color:var(--wt-text);position:relative;overflow:hidden;transition:background .3s}
-#wt-cw{flex:1;position:relative;min-height:0}
+#wt-app{--wt-sbw:300px}
+#wt-sb-grip{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;z-index:16}
+#wt-sb-grip:hover,#wt-sb-grip.on{background:var(--wt-accent);opacity:.45}
+#wt-cw{flex:1;position:relative;min-height:0;margin-left:var(--wt-sbw)}
 #wt-c{display:block;width:100%;height:100%}
-#wt-top{position:absolute;top:0;left:148px;right:0;display:flex;align-items:center;gap:10px;padding:9px 14px;background:linear-gradient(to bottom,rgba(12,14,20,.97) 55%,transparent);z-index:10;pointer-events:none}
+#wt-top{position:absolute;top:0;left:var(--wt-sbw);right:0;display:flex;align-items:center;gap:10px;padding:9px 14px;background:linear-gradient(to bottom,rgba(12,14,20,.97) 55%,transparent);z-index:10;pointer-events:none}
 #wt-app.light #wt-top{background:rgba(240,242,245,.95);backdrop-filter:blur(4px)}
 #wt-search-wrap{position:relative;pointer-events:all;flex:1;max-width:280px}
 #wt-mob-menu{display:none;width:30px;height:30px;border-radius:7px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);cursor:pointer;align-items:center;justify-content:center;font-size:14px;pointer-events:all;flex-shrink:0}
@@ -154,7 +157,8 @@ const CSS = `
   #wt-hint{display:none}
   #wt-legend{flex-wrap:wrap;justify-content:center;gap:6px 10px}
   #wt-view2d{left:0;top:80px}
-  #wt-sb{width:min(210px,78vw);transform:translateX(-100%);transition:transform .28s cubic-bezier(.34,1.56,.64,1),background .3s}
+  #wt-cw{margin-left:0}
+  #wt-sb{width:min(280px,82vw);transform:translateX(-100%);transition:transform .28s cubic-bezier(.34,1.56,.64,1),background .3s}
   #wt-sb.mobile-open{transform:translateX(0)}
   #wt-sb-overlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:14}
   #wt-sb-overlay.show{display:block}
@@ -216,12 +220,12 @@ const CSS = `
 .wt-pv{font-size:13px;font-weight:800;line-height:1.1;color:var(--wt-text)}
 .wt-pl{font-size:8px;color:rgba(255,255,255,.35);font-weight:600;letter-spacing:.4px;margin-top:1px}
 .wt-pill.occ .wt-pv{color:#fb923c}.wt-pill.free .wt-pv{color:#4ade80}.wt-pill.qty .wt-pv{color:#60a5fa;font-size:11px}
-#wt-bot{position:absolute;bottom:0;left:148px;right:0;display:flex;align-items:flex-end;justify-content:space-between;padding:9px 14px;background:linear-gradient(to top,rgba(12,14,20,.97) 55%,transparent);z-index:10;pointer-events:none}
+#wt-bot{position:absolute;bottom:0;left:var(--wt-sbw);right:0;display:flex;align-items:flex-end;justify-content:space-between;padding:9px 14px;background:linear-gradient(to top,rgba(12,14,20,.97) 55%,transparent);z-index:10;pointer-events:none}
 #wt-hint{font-size:9px;color:rgba(255,255,255,.25);line-height:1.8}
 #wt-legend{display:flex;gap:8px;align-items:center}
 .wt-li{display:flex;align-items:center;gap:4px;font-size:9px;color:rgba(255,255,255,.4)}
 .wt-lb{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-#wt-sb{position:absolute;left:0;top:0;bottom:0;width:148px;background:var(--wt-sb);border-right:1px solid var(--wt-border);overflow:hidden;z-index:15;display:flex;flex-direction:column;transition:background .3s,border-color .3s}
+#wt-sb{position:absolute;left:0;top:0;bottom:0;width:var(--wt-sbw);background:var(--wt-sb);border-right:1px solid var(--wt-border);overflow:hidden;z-index:15;display:flex;flex-direction:column;transition:background .3s,border-color .3s}
 #wt-sb::-webkit-scrollbar{width:3px}
 #wt-sb::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px}
 .wt-sb-brand{padding:10px 10px 7px;font-size:12px;font-weight:800;color:var(--wt-text);border-bottom:1px solid var(--wt-border);flex-shrink:0}
@@ -232,7 +236,34 @@ const CSS = `
 .wt-g-name{font-size:11px;font-weight:700;color:var(--wt-text);display:block}
 .wt-g-item.act .wt-g-name{color:var(--wt-accent2)}
 .wt-g-meta{font-size:9px;color:var(--wt-text3)}
-#wt-sb-list{flex:1 1 auto;min-height:0;overflow-y:auto}  /* only the list scrolls; the buttons below stay put */
+#wt-sb-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:4px 0}
+.wt-t-filter{padding:6px 8px;border-bottom:1px solid var(--wt-border)}
+.wt-t-filter input{width:100%;box-sizing:border-box;background:var(--wt-card);border:1px solid var(--wt-border);border-radius:6px;padding:5px 8px;color:var(--wt-text);font-size:11px;outline:none}
+.wt-t-row{display:flex;align-items:center;gap:5px;padding:5px 8px 5px 6px;cursor:pointer;border-left:3px solid transparent;white-space:nowrap}
+.wt-t-row:hover{background:var(--wt-card)}
+.wt-t-row.act{background:var(--wt-pill);border-left-color:var(--wt-accent)}
+.wt-t-row.act .wt-t-name{color:var(--wt-accent2)}
+.wt-t-tw{width:12px;flex:none;text-align:center;color:var(--wt-text3);font-size:10px}
+.wt-t-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;color:var(--wt-text)}
+.wt-t-row.floor .wt-t-name{font-weight:700}
+.wt-t-meta{flex:none;font-size:9px;color:var(--wt-text3)}
+#wt-map-hover{position:absolute;z-index:30;pointer-events:none;background:rgba(12,14,20,.92);color:#e2e8f0;border:1px solid rgba(255,255,255,.12);border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;white-space:nowrap}
+#wt-map-hover span{display:block;font-weight:400;font-size:9px;color:#94a3b8;margin-top:1px}
+#wt-map-panel{position:absolute;right:12px;top:56px;width:250px;z-index:30;background:var(--wt-sb);border:1px solid var(--wt-border);border-radius:10px;padding:12px;box-shadow:0 12px 32px rgba(0,0,0,.35)}
+.wt-mp-title{font-size:12px;font-weight:700;color:var(--wt-text);margin-bottom:4px}
+.wt-mp-title span{color:#f59e0b;font-weight:600}
+.wt-mp-hint{font-size:10px;color:var(--wt-text3);margin-bottom:8px;line-height:1.4}
+.wt-mp-name{font-size:12px;font-weight:700;color:var(--wt-accent2);margin:6px 0}
+.wt-mp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 8px;margin-bottom:10px}
+.wt-mp-grid label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--wt-text3)}
+.wt-mp-grid input,.wt-mp-grid select{background:var(--wt-card);border:1px solid var(--wt-border);border-radius:5px;padding:5px 6px;color:var(--wt-text);font-size:11px;width:100%;box-sizing:border-box}
+.wt-mp-btns{display:flex;gap:6px}
+.wt-mp-btns button{flex:1;height:30px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--wt-border)}
+.wt-mp-save{background:var(--wt-accent);color:#fff;border-color:var(--wt-accent)!important}
+.wt-mp-save:disabled{opacity:.45;cursor:default}
+.wt-mp-cancel{background:var(--wt-card);color:var(--wt-text)}
+.wt-map-edit-btn{background:rgba(245,158,11,.16)!important;color:#fbbf24!important;border:1px solid rgba(245,158,11,.45)!important;border-radius:6px;height:26px;padding:0 10px}
+.wt-t-empty{padding:14px 10px;font-size:11px;color:var(--wt-text3)}  /* only the list scrolls; the buttons below stay put */
 .wt-sb-foot{margin-top:auto;flex-shrink:0;padding:8px 10px;border-top:1px solid rgba(255,255,255,.06);background:var(--wt-sb)}
 .wt-sb-btn{width:100%;height:28px;border-radius:6px;border:1px solid rgba(59,130,246,.4);background:rgba(59,130,246,.1);color:#60a5fa;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;line-height:1}
 .wt-sb-btn:hover{background:rgba(59,130,246,.2)}
@@ -354,7 +385,7 @@ const CSS = `
 .wt-im-val{font-weight:700;color:#276749}
 .wt-im-idx{color:#cbd5e0;text-align:center;width:28px}
 .wt-im-empty{text-align:center;padding:28px;color:#a0aec0;font-size:13px}
-#wt-view2d{position:absolute;left:148px;right:0;top:44px;bottom:0;overflow:auto;display:none;background:var(--wt-bg)}
+#wt-view2d{position:absolute;left:var(--wt-sbw);right:0;top:44px;bottom:0;overflow:auto;display:none;background:var(--wt-bg)}
 #wt-view2d::-webkit-scrollbar{width:5px}
 #wt-view2d::-webkit-scrollbar-thumb{background:var(--wt-border);border-radius:10px}
 .wt-2d-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:16px}
@@ -589,7 +620,7 @@ const CSS = `
 /* ─────────────────────────────────────────────────────────────
    STORE  (shared reactive state)
 ───────────────────────────────────────────────────────────── */
-const FORM_EXTRAS = { custom_wms_settings:'', wt_render_mode:'', wt_bay_type:'', wt_max_weight_kg:0, wt_weight_limit_action:'Warn', wt_length:0, wt_breadth:0 };
+const FORM_EXTRAS = { custom_wms_settings:'', wt_render_mode:'', wt_bay_type:'', wt_max_weight_kg:0, wt_weight_limit_action:'Warn', wt_length:0, wt_breadth:0, wt_pos_x:'', wt_pos_y:'', wt_rotation:'0' };
 
 const store = reactive({
   isDark: true,
@@ -630,6 +661,10 @@ const store = reactive({
   ttData: null,
   threeReady: false,
   sidebarOpen: false,
+  // the map: a warehouse and everything under it, drawn in place; Edit layout drags blocks (metres, half-metre steps)
+  mapMode: false, mapRoot: null, mapData: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
+  // left pane: the warehouse tree, a level at a time
+  treeRoots: [], treeCompanies: 1, treeKids: {}, treeOpen: {}, treeLoading: {}, treeSel: null, treeFilter: '',
   aisleMode: false,
   aislePickerOpen: false,
   aisleGaps: [],
@@ -738,9 +773,10 @@ class ThreeEngine {
       new THREE.MeshStandardMaterial({color:0x0a0c12,roughness:.95,metalness:.05})
     );
     fl.rotation.x=-Math.PI/2; fl.position.y=-.02; fl.receiveShadow=true;
-    this.scene.add(fl);
+    this.scene.add(fl); this.floorMesh=fl;
     const gc = store.isDark?0x181c28:0xdde1e7;
-    this.scene.add(new THREE.GridHelper(80,40,gc,gc));
+    this.grid=new THREE.GridHelper(80,40,gc,gc); this.scene.add(this.grid);
+    this.dirLight=dL; this.maxR=60;
     this.rootGrp = new THREE.Group();
     this.scene.add(this.rootGrp);
     this._sizeRenderer();
@@ -839,23 +875,10 @@ class ThreeEngine {
   buildScene(slots) {
     const THREE=window.THREE;
     this._clear();
-    this.meshMap={};
+    this.meshMap={}; this.blockMap={}; this._tgt=this.rootGrp;
+    this.setExtent(30);
     const parking = store.curGrp?.render_mode === 'Parking';
     store.selKey=null;
-    const SW=2.2, SD=2.2, GAP=.6, LVH=1.0, BASE=.1;
-    const cols=Math.max(...slots.map(s=>s.col),0)+1;
-    const maxRow=Math.max(...slots.map(s=>s.row),0);
-    const rowZOffset={};
-    let cumZ=0;
-    for (let r=0;r<=maxRow;r++){
-      rowZOffset[r]=cumZ;
-      const rowSlots=slots.filter(s=>s.row===r);
-      const rowGap=rowSlots.length?(parseFloat(rowSlots[0].row_gap)||0):0;
-      cumZ+=SD+GAP+rowGap;
-    }
-    const totalDepth=cumZ-GAP;
-    const ox=-(cols*(SW+GAP)-GAP)/2;
-    const oz=-totalDepth/2;
     const baseMat =new THREE.MeshStandardMaterial({color:store.isDark?0x1a2235:0xdde3ef,roughness:.8,metalness:.25});
     const pilMat  =new THREE.MeshStandardMaterial({color:store.isDark?0x2d3a52:0xc5cdd8,roughness:.7,metalness:.4});
     const shelfMat=new THREE.MeshStandardMaterial({color:store.isDark?0x22304a:0xcfd6e0,roughness:.9});
@@ -863,30 +886,42 @@ class ThreeEngine {
     this.scene.background.setHex(bgCol);
     this.scene.fog.color.setHex(bgCol);
     this.renderer.setClearColor(bgCol,1);
+    this._mats={baseMat, pilMat, shelfMat};
+    // slots by their X/Y when set, else on the row/column grid (slotPlaces), centred on the origin
+    const lay=this.slotPlaces(slots);
     slots.forEach(sl=>{
-      const nL=sl.levels.length;
-      const cx=ox+sl.col*(SW+GAP)+SW/2;
-      const cz=oz+(rowZOffset[sl.row]||0)+SD/2;
-      if (parking) { this._parkingSlot(sl, cx, cz, SW, SD, BASE, baseMat, pilMat); return; }
+      const p=lay.places[sl.wh];
+      this._slotMeshes(sl, p.x+p.w/2-lay.w/2, p.y+p.d/2-lay.d/2, parking);
+    });
+    this._startAnimate();
+  }
+
+  // one slot's meshes at (cx, cz) in this._tgt: a rack of shelves, or a parking pillar with its bays
+  _slotMeshes(sl, cx, cz, parking) {
+    const THREE=window.THREE, SW=2.2, SD=2.2, LVH=1.0, BASE=.1;
+    const {baseMat, pilMat} = this._mats;
+    const shelfMat = this._mats.shelfMat;
+    const nL=sl.levels.length;
+    if (parking) { this._parkingSlot(sl, cx, cz, SW, SD, BASE, baseMat, pilMat); return; }
       const base=new THREE.Mesh(new THREE.BoxGeometry(SW,BASE,SD),baseMat);
       base.position.set(cx,BASE/2,cz); base.castShadow=true; base.receiveShadow=true;
-      this.rootGrp.add(base);
+      this._tgt.add(base);
       [[-1,-1],[-1,1],[1,-1],[1,1]].forEach(([dx,dz])=>{
         const p=new THREE.Mesh(new THREE.BoxGeometry(.06,nL*LVH+BASE,.06),pilMat);
         p.position.set(cx+dx*(SW/2-.04),(nL*LVH+BASE)/2,cz+dz*(SD/2-.04));
-        p.castShadow=true; this.rootGrp.add(p);
+        p.castShadow=true; this._tgt.add(p);
       });
       sl.levels.forEach((lv,li)=>{
         const lp=lvFill(lv), hs=(lv.uoms||[]).some(u=>u.qty>0);
         const col=hs?FC(lp):(store.isDark?0x101827:0xe8edf5);
         const y0=BASE+li*LVH;
         const shelf=new THREE.Mesh(new THREE.BoxGeometry(SW,.024,SD),shelfMat);
-        shelf.position.set(cx,y0+.012,cz); this.rootGrp.add(shelf);
+        shelf.position.set(cx,y0+.012,cz); this._tgt.add(shelf);
         const shell=new THREE.Mesh(
           new THREE.BoxGeometry(SW-.08,LVH-.03,SD-.08),
           new THREE.MeshStandardMaterial({color:hs?col:(store.isDark?0x0f1520:0xdde3ef),transparent:true,opacity:hs?.13:.06,side:THREE.BackSide,roughness:.3,depthWrite:false})
         );
-        shell.position.set(cx,y0+LVH/2,cz); this.rootGrp.add(shell);
+        shell.position.set(cx,y0+LVH/2,cz); this._tgt.add(shell);
         let fillM=null;
         if (hs){
           const fh=Math.max(.05,(Math.min(lp==null?35:lp,100)/100)*(LVH-.12));
@@ -895,7 +930,7 @@ class ThreeEngine {
             new THREE.MeshStandardMaterial({color:col,roughness:.38,metalness:.14,emissive:col,emissiveIntensity:.2})
           );
           fillM.position.set(cx,y0+.06+fh/2,cz); fillM.castShadow=true;
-          this.rootGrp.add(fillM);
+          this._tgt.add(fillM);
         }
         const proxy=new THREE.Mesh(
           new THREE.BoxGeometry(SW-.06,LVH-.02,SD-.06),
@@ -903,11 +938,9 @@ class ThreeEngine {
         );
         proxy.position.set(cx,y0+LVH/2,cz);
         proxy.userData={slot:sl,lv,key:lvKey(sl,lv)};
-        this.rootGrp.add(proxy);
+        this._tgt.add(proxy);
         this.meshMap[lvKey(sl,lv)]={fillM,shellM:shell,proxy,lv,slot:sl,li,col};
       });
-    });
-    this._startAnimate();
   }
 
   // Parking layout: the slot is a pillar and its levels are bays side by side on the ground around it.
@@ -916,18 +949,18 @@ class ThreeEngine {
     const n=Math.max(1,sl.levels.length), gc=Math.ceil(Math.sqrt(n)), gr=Math.ceil(n/gc);
     const cw=SW/gc, cd=SD/gr;
     const post=new THREE.Mesh(new THREE.BoxGeometry(.14,1.4,.14),pilMat);
-    post.position.set(cx,.7,cz); post.castShadow=true; this.rootGrp.add(post);
+    post.position.set(cx,.7,cz); post.castShadow=true; this._tgt.add(post);
     sl.levels.forEach((lv,li)=>{
       const lp=lvFill(lv), hs=lvHasStock(lv);
       const col=hs?FC(lp):(store.isDark?0x101827:0xe8edf5);
       const bx=cx-SW/2+cw*(li%gc)+cw/2, bz=cz-SD/2+cd*Math.floor(li/gc)+cd/2;
       const pad=new THREE.Mesh(new THREE.BoxGeometry(cw-.1,BASE,cd-.1),baseMat);
-      pad.position.set(bx,BASE/2,bz); pad.receiveShadow=true; this.rootGrp.add(pad);
+      pad.position.set(bx,BASE/2,bz); pad.receiveShadow=true; this._tgt.add(pad);
       const shell=new THREE.Mesh(
         new THREE.BoxGeometry(cw-.16,.7,cd-.16),
         new THREE.MeshStandardMaterial({color:hs?col:(store.isDark?0x0f1520:0xdde3ef),transparent:true,opacity:hs?.13:.06,side:THREE.BackSide,roughness:.3,depthWrite:false})
       );
-      shell.position.set(bx,BASE+.35,bz); this.rootGrp.add(shell);
+      shell.position.set(bx,BASE+.35,bz); this._tgt.add(shell);
       let fillM=null;
       if (hs){
         const h=.25+.45*(Math.min(lp==null?60:lp,100)/100);  // occupied bay: a block sized by fill
@@ -935,7 +968,7 @@ class ThreeEngine {
           new THREE.BoxGeometry(cw-.3,h,cd-.3),
           new THREE.MeshStandardMaterial({color:col,roughness:.38,metalness:.14,emissive:col,emissiveIntensity:.2})
         );
-        fillM.position.set(bx,BASE+h/2,bz); fillM.castShadow=true; this.rootGrp.add(fillM);
+        fillM.position.set(bx,BASE+h/2,bz); fillM.castShadow=true; this._tgt.add(fillM);
       }
       const proxy=new THREE.Mesh(
         new THREE.BoxGeometry(cw-.1,.8,cd-.1),
@@ -943,9 +976,166 @@ class ThreeEngine {
       );
       proxy.position.set(bx,BASE+.4,bz);
       proxy.userData={slot:sl,lv,key:lvKey(sl,lv)};
-      this.rootGrp.add(proxy);
+      this._tgt.add(proxy);
       this.meshMap[lvKey(sl,lv)]={fillM,shellM:shell,proxy,lv,slot:sl,li,col};
     });
+  }
+
+
+  // ── the map: a whole site drawn in place (any warehouse with its subtree) ──
+  // Sizes are metres. A warehouse stands at (X, Y) from its parent's top-left corner, length along X and breadth along
+  // Y (Rotation 90 swaps them). Warehouses with no position are packed in rows after the placed ones, so the map works
+  // before anyone lays it out. A Floor draws its slots (racks or parking bays) inside its footprint, scaled to fit.
+  setExtent(size) {
+    const THREE=window.THREE, R=Math.max(20, size);
+    this.maxR=R*2.4; this.tR=Math.min(this.maxR, R*1.3); this.tPX=0; this.tPZ=0;
+    this.camera.far=R*8; this.camera.updateProjectionMatrix();
+    this.scene.fog.near=R*1.6; this.scene.fog.far=R*5;
+    const span=Math.max(80, R*3);
+    this.floorMesh.scale.set(span/80, span/80, 1);
+    this.scene.remove(this.grid); this.grid.geometry.dispose();
+    const gc = store.isDark?0x181c28:0xdde1e7;
+    this.grid=new THREE.GridHelper(span, Math.round(span/2), gc, gc); this.scene.add(this.grid);
+    const sc=this.dirLight.shadow.camera, h=Math.max(30, R*0.8);
+    sc.left=-h; sc.right=h; sc.top=h; sc.bottom=-h; sc.far=R*6; sc.updateProjectionMatrix();
+    this.dirLight.position.set(R*0.5, R, R*0.5);
+  }
+
+  label(text, metres, color='#e2e8f0') {
+    const THREE=window.THREE, c=document.createElement('canvas'), x=c.getContext('2d'), px=48;
+    x.font=`700 ${px}px -apple-system,Inter,sans-serif`;
+    const w=Math.ceil(x.measureText(text).width)+24; c.width=w; c.height=px+18;
+    x.font=`700 ${px}px -apple-system,Inter,sans-serif`;
+    x.fillStyle='rgba(12,14,20,.72)'; x.fillRect(0,0,w,c.height);
+    x.fillStyle=color; x.textBaseline='middle'; x.fillText(text,12,c.height/2+2);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false,transparent:true}));
+    const h=metres; sp.scale.set(h*w/c.height, h, 1); sp.renderOrder=10;
+    return sp;
+  }
+
+  // where each slot of a floor stands, in the floor's own metres from its top-left corner: by its X/Y when set,
+  // else on the row/column grid (row gaps kept)
+  slotPlaces(slots) {
+    const SW=2.2, SD=2.2, GAP=.6, out={};
+    const placed=slots.some(s=>s.x!=null || s.y!=null);
+    if (placed) {
+      let w=0, d=0;
+      slots.forEach(s=>{
+        const sw=parseFloat(s.length)||SW, sd=parseFloat(s.breadth)||SD, x=parseFloat(s.x)||0, y=parseFloat(s.y)||0;
+        out[s.wh]={x, y, w:sw, d:sd}; w=Math.max(w, x+sw); d=Math.max(d, y+sd);
+      });
+      // slots still without a position go on a grid below the placed ones
+      const rest=slots.filter(s=>s.x==null && s.y==null);
+      rest.forEach((s,i)=>{ const x=(i%6)*(SW+GAP), y=d+GAP+Math.floor(i/6)*(SD+GAP); out[s.wh]={x, y, w:SW, d:SD}; });
+      if (rest.length) { w=Math.max(w, Math.min(rest.length,6)*(SW+GAP)-GAP); d+=GAP+Math.ceil(rest.length/6)*(SD+GAP)-GAP; }
+      return {places:out, w:Math.max(w, SW), d:Math.max(d, SD)};
+    }
+    const cols=Math.max(...slots.map(s=>s.col),0)+1, maxRow=Math.max(...slots.map(s=>s.row),0), rowZ={};
+    let z=0;
+    for (let r=0;r<=maxRow;r++){ rowZ[r]=z; const rs=slots.filter(s=>s.row===r); z+=SD+GAP+(rs.length?(parseFloat(rs[0].row_gap)||0):0); }
+    slots.forEach(s=>{ out[s.wh]={x:s.col*(SW+GAP), y:rowZ[s.row]||0, w:SW, d:SD}; });
+    return {places:out, w:Math.max(cols*(SW+GAP)-GAP, SW), d:Math.max(z-GAP, SD)};
+  }
+
+  buildMap(data, keepCamera=false) {
+    const THREE=window.THREE;
+    this._clear();
+    this.meshMap={}; this.blockMap={}; store.selKey=null;
+    const bgCol=store.isDark?0x0c0e14:0xf0f2f5;
+    this.scene.background.setHex(bgCol); this.scene.fog.color.setHex(bgCol); this.renderer.setClearColor(bgCol,1);
+    const nodes=Object.fromEntries(data.nodes.map(n=>[n.id, n]));
+    const kids={};
+    data.nodes.forEach(n=>{ if (n.id!==data.root && nodes[n.parent]) (kids[n.parent]=kids[n.parent]||[]).push(n); });
+    const PAD=2, GAP=3, LEAF=[8,5];
+    const measure=(n)=>{
+      const L=parseFloat(n.length)||0, B=parseFloat(n.breadth)||0;
+      if (n.type==='Floor') {
+        const slots=data.slots[n.id]||[];
+        n._slots=slots; n._layout=this.slotPlaces(slots);
+        const cw=n._layout.w+1, cd=n._layout.d+1;  // half a metre round the racks
+        n._scale=(L&&B)?Math.min(L/cw, B/cd):1;
+        return [L||cw, B||cd];
+      }
+      const ks=kids[n.id]||[];
+      if (!ks.length) return [L||LEAF[0], B||LEAF[1]];
+      ks.forEach(k=>{ const [w,d]=measure(k); [k._w,k._d]=String(k.rotation)==='90'?[d,w]:[w,d]; });
+      let maxX=0, maxY=0;
+      ks.filter(k=>k.x!=null||k.y!=null).forEach(k=>{
+        k._x=parseFloat(k.x)||0; k._y=parseFloat(k.y)||0; maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
+      });
+      const free=ks.filter(k=>k.x==null&&k.y==null);
+      if (free.length) {  // packed in rows below what is placed
+        const area=free.reduce((a,k)=>a+k._w*k._d,0);
+        const rowW=Math.max(L, maxX, Math.sqrt(area)*1.5, ...free.map(k=>k._w+2*PAD));
+        let x=PAD, y=maxY?maxY+GAP:PAD, rowH=0;
+        free.forEach(k=>{
+          if (x>PAD && x+k._w>rowW) { x=PAD; y+=rowH+GAP; rowH=0; }
+          k._x=x; k._y=y; x+=k._w+GAP; rowH=Math.max(rowH,k._d);
+          maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
+        });
+      }
+      return [L||maxX+PAD, B||maxY+PAD];
+    };
+    const root=nodes[data.root];
+    const [W,D]=measure(root);
+    root._w=W; root._d=D;
+    const TONE=store.isDark?[0x1d2a44,0x22324f,0x1a2438,0x253555]:[0xdfe7f3,0xd3deee,0xe8eef7,0xcbd7ea];
+    const draw=(n, frame, depth)=>{
+      const grp=new THREE.Group(); grp.position.set(n._x||0, 0, n._y||0); frame.add(grp);
+      const y=.02+depth*.03;
+      const pad=new THREE.Mesh(new THREE.BoxGeometry(n._w, .04, n._d),
+        new THREE.MeshStandardMaterial({color:TONE[depth%TONE.length], roughness:.95, transparent:true, opacity:depth?0.9:0.55}));
+      pad.position.set(n._w/2, y, n._d/2); pad.receiveShadow=true; grp.add(pad);
+      const edge=new THREE.LineSegments(new THREE.EdgesGeometry(pad.geometry),
+        new THREE.LineBasicMaterial({color:store.isDark?0x3b82f6:0x2563eb, transparent:true, opacity:depth?0.55:0.3}));
+      edge.position.copy(pad.position); grp.add(edge);
+      const alone=n.type==='Floor' && (kids[n.parent]||[]).length===1;  // an area's one floor: the area's label says it
+      if (n.id!==data.root && !alone) {
+        const lbl=this.label(n.label, Math.max(.6, Math.min(depth<=1?3:1.6, Math.min(n._w,n._d)*.12)));
+        lbl.position.set(Math.min(n._w/2, lbl.scale.x/2+.3), 1.2+depth*.15, .2); grp.add(lbl);
+      }
+      this.blockMap[n.id]={grp, pad, edge, node:n, frame, kind:'node', parent:n.parent};
+      pad.userData={block:n.id};
+      const content=new THREE.Group();
+      if (String(n.rotation)==='90') { content.position.set(n._w,0,0); content.rotation.y=-Math.PI/2; }
+      grp.add(content);
+      if (n.type==='Floor') {
+        const fl=new THREE.Group(); fl.scale.setScalar(n._scale||1); fl.position.set(.5*(n._scale||1), 0, .5*(n._scale||1));
+        content.add(fl);
+        const parking=n.render_mode==='Parking';
+        this._mats=this._mats||{};
+        this._mats.baseMat=new THREE.MeshStandardMaterial({color:store.isDark?0x1a2235:0xdde3ef,roughness:.8,metalness:.25});
+        this._mats.pilMat=new THREE.MeshStandardMaterial({color:store.isDark?0x2d3a52:0xc5cdd8,roughness:.7,metalness:.4});
+        this._mats.shelfMat=new THREE.MeshStandardMaterial({color:store.isDark?0x22304a:0xcfd6e0,roughness:.9});
+        (n._slots||[]).forEach(sl=>{
+          const p=n._layout.places[sl.wh], sg=new THREE.Group(); sg.position.set(p.x, y+.04, p.y); fl.add(sg);
+          this._tgt=sg;
+          this._slotMeshes(sl, p.w/2, p.d/2, parking);
+          const hit=new THREE.Mesh(new THREE.BoxGeometry(p.w,.05,p.d), new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false}));
+          hit.position.set(p.w/2,.03,p.d/2); hit.userData={block:'slot:'+sl.wh}; sg.add(hit);
+          this.blockMap['slot:'+sl.wh]={grp:sg, pad:hit, node:{id:sl.wh, label:sl.label, x:p.x, y:p.y, _x:p.x, _y:p.y, slot:true}, frame:fl, kind:'slot', floor:n};
+        });
+      } else {
+        (kids[n.id]||[]).forEach(k=>draw(k, content, depth+1));
+      }
+    };
+    const world=new THREE.Group(); world.position.set(-W/2, 0, -D/2); this.rootGrp.add(world);
+    this.mapWorld=world;
+    draw(root, world, 0);
+    this._tgt=this.rootGrp;
+    if (!keepCamera) {
+      this.setExtent(Math.max(W, D));
+      this.tT=0; this.tP=.5;  // from the front and high: the map reads like a plan, its top edge at the top
+      // far enough that the whole site fits this screen, a narrow phone included
+      const vf=this.camera.fov*Math.PI/360, hf=Math.atan(Math.tan(vf)*(this.camera.aspect||1));
+      const fit=Math.max((W/2)/Math.tan(hf), (D/2)/Math.tan(vf))*1.15;
+      this.maxR=Math.max(this.maxR, fit*1.5); this.tR=fit;
+      // a tall narrow screen sits the camera further out than setExtent's fog: push the fog and far plane back
+      this.scene.fog.near=Math.max(this.scene.fog.near, fit*1.1);
+      this.scene.fog.far=Math.max(this.scene.fog.far, this.maxR*1.3);
+      this.camera.far=Math.max(this.camera.far, this.maxR*2); this.camera.updateProjectionMatrix();
+    }
+    this._startAnimate();
   }
 
   highlight(key) {
@@ -980,10 +1170,46 @@ class ThreeEngine {
   bindMouse(cwEl, onHover, onClick) {
     const rc=new window.THREE.Raycaster();
     const mouse=new window.THREE.Vector2();
+    const ground=new window.THREE.Plane(new window.THREE.Vector3(0,1,0), 0), hitPt=new window.THREE.Vector3();
+    const groundAt=(e)=>{
+      const r=cwEl.getBoundingClientRect();
+      mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+      rc.setFromCamera(mouse,this.camera);
+      return rc.ray.intersectPlane(ground, hitPt) ? hitPt.clone() : null;
+    };
+    const blockAt=(e)=>{
+      const r=cwEl.getBoundingClientRect();
+      mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+      rc.setFromCamera(mouse,this.camera);
+      const bh=rc.intersectObjects(Object.values(this.blockMap||{}).map(b=>b.pad));
+      return bh.length ? bh[0].object.userData.block : null;
+    };
     cwEl.addEventListener('mousedown',e=>{
+      if (store.mapMode && store.mapEdit && e.button===0) this.hovBlock=blockAt(e);  // the block under the pointer now
+      if (store.mapMode && store.mapEdit && e.button===0 && this.hovBlock && this.blockMap[this.hovBlock]
+          && this.hovBlock!==store.mapRoot) {
+        const b=this.blockMap[this.hovBlock], at=groundAt(e);
+        if (at) {
+          const local=b.frame.worldToLocal(at);
+          this.blockDrag={id:this.hovBlock, dx:local.x-b.grp.position.x, dz:local.z-b.grp.position.z};
+          actions.mapSelect(this.hovBlock);
+          e.preventDefault(); return;
+        }
+      }
       this.drag=true; this.rDrag=e.button===2;
       this.lx=e.clientX; this.ly=e.clientY; e.preventDefault();
     });
+    window.addEventListener('mousemove',e=>{
+      if (!this.blockDrag) return;
+      const b=this.blockMap[this.blockDrag.id], at=groundAt(e);
+      if (!b || !at) return;
+      const local=b.frame.worldToLocal(at), snap=v=>Math.max(0, Math.round(v*2)/2);  // half-metre steps
+      const x=snap(local.x-this.blockDrag.dx), z=snap(local.z-this.blockDrag.dz);
+      b.grp.position.x=x; b.grp.position.z=z;
+      actions.mapMoved(this.blockDrag.id, x, z);
+    });
+    window.addEventListener('mouseup',()=>{ this.blockDrag=null; });
+    window.addEventListener('touchend',()=>{ this.blockDrag=null; });
     cwEl.addEventListener('contextmenu',e=>e.preventDefault());
     window.addEventListener('mouseup',()=>{this.drag=false;});
     window.addEventListener('mousemove',e=>{
@@ -1002,17 +1228,37 @@ class ThreeEngine {
     });
     cwEl.addEventListener('wheel',e=>{
       e.preventDefault();
-      this.tR=Math.max(5,Math.min(60,this.tR+e.deltaY*.04));
+      this.tR=Math.max(5,Math.min(this.maxR,this.tR+e.deltaY*this.maxR/1500));
     },{passive:false});
     cwEl.addEventListener('touchstart',e=>{
+      if (store.mapMode && store.mapEdit && e.touches.length===1) {  // a finger on a block moves it, as the mouse does
+        const t=e.touches[0], id=blockAt(t);
+        if (id && id!==store.mapRoot && this.blockMap[id]) {
+          const at=groundAt(t);
+          if (at) {
+            const b=this.blockMap[id], local=b.frame.worldToLocal(at);
+            this.blockDrag={id, dx:local.x-b.grp.position.x, dz:local.z-b.grp.position.z};
+            actions.mapSelect(id); return;
+          }
+        }
+      }
       if (e.touches.length===2) this.ltD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
       else { this.ltX=e.touches[0].clientX; this.ltY=e.touches[0].clientY; }
     },{passive:true});
     cwEl.addEventListener('touchmove',e=>{
       e.preventDefault();
+      if (this.blockDrag) {
+        const b=this.blockMap[this.blockDrag.id], at=groundAt(e.touches[0]);
+        if (b && at) {
+          const local=b.frame.worldToLocal(at), snap=v=>Math.max(0, Math.round(v*2)/2);
+          const x=snap(local.x-this.blockDrag.dx), z=snap(local.z-this.blockDrag.dz);
+          b.grp.position.x=x; b.grp.position.z=z; actions.mapMoved(this.blockDrag.id, x, z);
+        }
+        return;
+      }
       if (e.touches.length===2){
         const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-        this.tR=Math.max(5,Math.min(60,this.tR-(d-this.ltD)*.08)); this.ltD=d;
+        this.tR=Math.max(5,Math.min(this.maxR,this.tR-(d-this.ltD)*this.maxR/750)); this.ltD=d;
       } else {
         const dx=e.touches[0].clientX-this.ltX, dy=e.touches[0].clientY-this.ltY;
         this.tT-=dx*.01; this.tP=Math.max(.08,Math.min(1.45,this.tP+dy*.01));
@@ -1024,17 +1270,23 @@ class ThreeEngine {
       const r=cwEl.getBoundingClientRect();
       mouse.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
       rc.setFromCamera(mouse,this.camera);
-      const hits=rc.intersectObjects(Object.values(this.meshMap).map(d=>d.proxy));
+      const hits=(store.mapMode && store.mapEdit) ? [] : rc.intersectObjects(Object.values(this.meshMap).map(d=>d.proxy));
       if (hits.length){
-        this.hovKey=hits[0].object.userData.key;
+        this.hovKey=hits[0].object.userData.key; this.hovBlock=null; store.mapHover=null;
         onHover(this.meshMap[this.hovKey],e.clientX-r.left,e.clientY-r.top);
         cwEl.style.cursor='pointer';
       } else {
-        this.hovKey=null; onHover(null,0,0); cwEl.style.cursor='grab';
+        this.hovKey=null; onHover(null,0,0);
+        const bh=store.mapMode ? rc.intersectObjects(Object.values(this.blockMap||{}).map(b=>b.pad)) : [];
+        this.hovBlock=bh.length ? bh[0].object.userData.block : null;
+        const b=this.hovBlock && this.blockMap[this.hovBlock];
+        store.mapHover = b && this.hovBlock!==store.mapRoot ? {label:b.node.label, x:e.clientX-r.left, y:e.clientY-r.top} : null;
+        cwEl.style.cursor = b ? (store.mapEdit && this.hovBlock!==store.mapRoot ? 'move' : 'pointer') : 'grab';
       }
     });
     // Single click → highlight + side panel only
     cwEl.addEventListener('click',()=>{
+      if (!this.hovKey && this.hovBlock) { actions.mapSelect(this.hovBlock); return; }
       if (!this.hovKey) return;
       const d=this.meshMap[this.hovKey];
       if (!d) return;
@@ -1042,6 +1294,8 @@ class ThreeEngine {
     });
     // Double click → open full item modal
     cwEl.addEventListener('dblclick',()=>{
+      const blk=!this.hovKey && this.hovBlock && this.blockMap[this.hovBlock];
+      if (blk && blk.kind==='node' && !store.mapEdit && this.hovBlock!==store.mapRoot) { actions.drillMap(blk.node); return; }
       if (!this.hovKey) return;
       const d=this.meshMap[this.hovKey];
       if (!d) return;
@@ -1051,6 +1305,11 @@ class ThreeEngine {
 }
 
 const engine = new ThreeEngine();
+// the open view drawn again: the map of a warehouse, or one Floor's racks (search-filtered)
+function redraw(keepCamera=false) {
+  if (store.mapMode && store.mapData) engine.buildMap(store.mapData, keepCamera);
+  else engine.buildScene(filteredSlots());
+}
 
 /* ─────────────────────────────────────────────────────────────
    ACTIONS  (business logic, shared across components)
@@ -1262,13 +1521,153 @@ const actions = {
       }
       const groups = await call('get_warehouse_groups');
       store.groups = groups||[];
+      await actions.loadTree();
       if (store.groups.length) await actions.selectGroup(store.groups[0]);
     } catch(e){ console.error('WT: groups', e); }
     finally { store.loading=false; }
   },
 
+  // ── the tree in the left pane ──
+  async loadTree() {
+    try {
+      store.treeRoots = (await call('get_tree')) || [];
+      store.treeCompanies = new Set(store.treeRoots.map(r=>r.company)).size;  // more than one: name it on the top rows
+      // one level opened, as the tree reads best: the company's warehouses and what they hold
+      for (const r of store.treeRoots) if (r.children) await actions.toggleNode(r, true);
+    } catch(e) { console.error('WT: tree', e); }
+  },
+
+  async toggleNode(n, open=null) {
+    const want = open===null ? !store.treeOpen[n.id] : open;
+    if (want && !store.treeKids[n.id]) {
+      store.treeLoading[n.id]=true;
+      try { store.treeKids[n.id] = (await call('get_tree',{parent:n.id})) || []; }
+      catch(e) { console.error('WT: tree', e); store.treeKids[n.id]=[]; }
+      finally { store.treeLoading[n.id]=false; }
+    }
+    store.treeOpen[n.id]=want;
+  },
+
+  // a Floor opens its 3D layout; any other warehouse with children opens below it
+  async clickNode(n) {
+    store.treeSel = n.id;
+    if (n.type==='Floor') {
+      await actions.selectGroup({id:n.id, name:n.label, render_mode:n.render_mode, ws:n.ws, slot_count:n.slot_count});
+    } else {
+      if (n.children && !store.treeOpen[n.id]) actions.toggleNode(n, true);
+      await actions.openMap(n);
+    }
+  },
+
+  // open the tree down to a warehouse (after a search or the first floor)
+  async revealInTree(id) {
+    try {
+      const path = (await call('get_path',{warehouse:id})) || [];
+      for (const p of path) {
+        const node = [...store.treeRoots, ...Object.values(store.treeKids).flat()].find(x=>x.id===p);
+        if (node) await actions.toggleNode(node, true);
+      }
+      store.treeSel = id;
+    } catch(e) { console.error('WT: tree path', e); }
+  },
+
+  // ── the map ──
+  async openMap(n) {
+    if (Object.keys(store.mapDirty).length && !confirm('Leave the layout without saving it?')) return;
+    store.mapMode=true; store.mapRoot=n.id; store.mapEdit=false; store.mapSel=null; store.mapDirty={};
+    store.curGrp=null; store.treeSel=n.id; store.dpOpen=false; store.sidebarOpen=false;
+    store.loading=true;
+    try {
+      const data = await call('get_map',{warehouse:n.id});
+      store.mapData=data;
+      store.slots=Object.values(data.slots||{}).flat();  // the counts at the top cover the whole map
+      if (data.too_many) notify(`Only the first ${Object.keys(data.slots).length} ${l('Floor', true)} are drawn in full`, 'orange');
+      if (store.curView!=='3d') actions.setView('3d'); else redraw();
+      engine.springIn();
+    } catch(e){ console.error('WT: map', e); notify('Could not load the map: '+(e.message||e), 'red'); }
+    finally { store.loading=false; }
+  },
+
+  async drillMap(node) {
+    if (node.type==='Floor') {
+      await actions.selectGroup({id:node.id, name:node.label, render_mode:node.render_mode, ws:node.ws});
+    } else {
+      await actions.openMap({id:node.id, label:node.label});
+      actions.revealInTree(node.id);
+    }
+  },
+
+  mapSelect(id) {
+    store.mapSel=id;
+    Object.entries(engine.blockMap||{}).forEach(([k,b])=>{
+      if (b.edge) { b.edge.material.color.setHex(k===id?0xf59e0b:(store.isDark?0x3b82f6:0x2563eb)); b.edge.material.opacity=k===id?1:.55; }
+    });
+  },
+
+  mapNode(id) {
+    const b = engine.blockMap?.[id];
+    if (!b) return null;
+    if (b.kind==='slot') {
+      for (const list of Object.values(store.mapData.slots)) { const sl=list.find(x=>x.wh===b.node.id); if (sl) return sl; }
+      return null;
+    }
+    return store.mapData.nodes.find(n=>n.id===id) || null;
+  },
+
+  mapMoved(id, x, z) {
+    const n = actions.mapNode(id);
+    if (!n) return;
+    // the first move among blocks that were auto-arranged fixes them all where they stand, so none of them jumps
+    const b = engine.blockMap[id];
+    const fix = (obj, px, py) => {
+      if (obj.x!=null || obj.y!=null) return;
+      obj.x=px; obj.y=py;
+      const w=obj.wh||obj.id;
+      store.mapDirty[w] = Object.assign(store.mapDirty[w]||{warehouse:w}, {x:px, y:py});
+    };
+    if (b.kind==='slot') {
+      (b.floor._slots||[]).forEach(sl=>{ const p=b.floor._layout.places[sl.wh]; if (p) fix(sl, p.x, p.y); });
+    } else {
+      store.mapData.nodes.filter(k=>k.parent===b.parent && k.id!==store.mapRoot).forEach(k=>fix(k, k._x||0, k._y||0));
+    }
+    n.x=x; n.y=z;
+    const wh = n.wh || n.id;
+    store.mapDirty[wh] = Object.assign(store.mapDirty[wh]||{warehouse:wh}, {x, y:z});
+  },
+
+  mapField(field, value) {
+    const n = actions.mapNode(store.mapSel);
+    if (!n) return;
+    const v = field==='rotation' ? String(value) : (value==='' || value==null ? null : parseFloat(value));
+    n[field] = v;
+    const wh = n.wh || n.id;
+    store.mapDirty[wh] = Object.assign(store.mapDirty[wh]||{warehouse:wh}, {[field]: v==null ? 0 : v});
+    const sel=store.mapSel;
+    redraw(true);
+    actions.mapSelect(sel);
+  },
+
+  async mapSave() {
+    const rows = Object.values(store.mapDirty);
+    if (!rows.length) { store.mapEdit=false; return; }
+    try {
+      await call('save_positions', {positions: JSON.stringify(rows)});
+      notify(`Layout saved (${rows.length})`);
+      store.mapDirty={}; store.mapEdit=false;
+      await actions.openMap({id:store.mapRoot});
+    } catch(e) { notify('Could not save the layout: '+(e.message||e), 'red'); }
+  },
+
+  async mapCancel() {
+    store.mapDirty={};
+    await actions.openMap({id:store.mapRoot});
+  },
+
   async selectGroup(g) {
+    if (store.mapMode && Object.keys(store.mapDirty).length && !confirm('Leave the layout without saving it?')) return;
+    store.mapMode=false; store.mapData=null; store.mapEdit=false; store.mapHover=null;
     store.curGrp=g;
+    if (store.treeSel!==g.id) actions.revealInTree(g.id);
     store.ws=g.ws;
     store.imAllItems={};
     watchFloor(g.id);
@@ -1280,7 +1679,7 @@ const actions = {
       const slots = await call('get_slots',{group_warehouse:g.id});
       store.slots=slots||[];
       if (store.curView==='3d') {
-        engine.buildScene(filteredSlots());
+        redraw();
         engine.springIn();
       } else {
         // 2D will re-render reactively
@@ -1350,7 +1749,7 @@ const actions = {
       if (sl.wh!==slotWh) return;
       sl.levels.forEach(lv=>{ if(lv.wh===lvWh) lv.uoms[ui].cap=parseFloat(val)||0; });
     });
-    if (store.curView==='3d') engine.buildScene(filteredSlots());
+    if (store.curView==='3d') redraw();
     const d=Object.values(engine.meshMap).find(x=>x.slot.wh===slotWh&&x.lv.wh===lvWh);
     if (d){ const k=lvKey(d.slot,d.lv); engine.highlight(k); store.selKey=k; actions.openDP(d); }
     const lv=store.slots.find(s=>s.wh===slotWh)?.levels.find(l=>l.wh===lvWh);
@@ -1469,7 +1868,7 @@ const actions = {
           wt_col: d.wt_col || 0,
           wt_row_gap: d.wt_row_gap || 0,
           uom_capacities: (d.uom_capacities||[]).map(r=>({uom:r.uom, capacity:r.capacity})),
-          custom_wms_settings: d.custom_wms_settings || '', wt_render_mode: d.wt_render_mode || '', wt_bay_type: d.wt_bay_type || '', wt_max_weight_kg: d.wt_max_weight_kg || 0, wt_weight_limit_action: d.wt_weight_limit_action || 'Warn', wt_length: d.wt_length || 0, wt_breadth: d.wt_breadth || 0,
+          custom_wms_settings: d.custom_wms_settings || '', wt_render_mode: d.wt_render_mode || '', wt_bay_type: d.wt_bay_type || '', wt_max_weight_kg: d.wt_max_weight_kg || 0, wt_weight_limit_action: d.wt_weight_limit_action || 'Warn', wt_length: d.wt_length || 0, wt_breadth: d.wt_breadth || 0, wt_pos_x: d.wt_placed ? d.wt_pos_x : '', wt_pos_y: d.wt_placed ? d.wt_pos_y : '', wt_rotation: d.wt_rotation || '0',
         };
       } catch(e) {
         store.whFormError = 'Failed to load warehouse: '+e.message;
@@ -1554,6 +1953,9 @@ const actions = {
       wt_weight_limit_action: store.whForm.wt_weight_limit_action || 'Warn',
       wt_length: store.whForm.wt_length || 0,
       wt_breadth: store.whForm.wt_breadth || 0,
+      wt_pos_x: store.whForm.wt_pos_x === '' ? null : store.whForm.wt_pos_x,
+      wt_pos_y: store.whForm.wt_pos_y === '' ? null : store.whForm.wt_pos_y,
+      wt_rotation: store.whForm.wt_rotation || '0',
     };
     try {
       if (store.whFormMode === 'edit') {
@@ -1602,7 +2004,7 @@ const actions = {
     const app=document.getElementById('wt-app');
     app.classList.toggle('dark',store.isDark);
     app.classList.toggle('light',!store.isDark);
-    if (store.curView==='3d' && store.slots.length) engine.buildScene(filteredSlots());
+    if (store.curView==='3d' && store.slots.length) redraw();
   },
 
   toggleSidebar() {
@@ -1610,6 +2012,7 @@ const actions = {
   },
 
   setView(v) {
+    if (v==='2d' && store.mapMode) { notify(`The 2D view shows one ${l('Floor')}: pick one in the tree`, 'orange'); return; }
     store.curView=v;
     const cw3d=document.getElementById('wt-cw');
     const v2d=document.getElementById('wt-view2d');
@@ -1619,7 +2022,7 @@ const actions = {
       v2d.style.display=v==='2d'?'block':'none';
       if(isMobile) v2d.style.top='80px';
     }
-    if (v==='3d' && store.slots.length) engine.buildScene(filteredSlots());
+    if (v==='3d' && (store.slots.length || store.mapMode)) redraw();
     engine._startAnimate();
   },
 
@@ -1634,7 +2037,7 @@ const actions = {
       } catch(e){ console.error('WT: search', e); }
     }
     store.searchOpen = store.searchHits.length>0;
-    if (store.curView==='3d') engine.buildScene(filteredSlots());
+    if (store.curView==='3d') redraw();
     // 2D re-renders reactively. A single hit on this floor: go straight to it.
     const here = store.searchHits.filter(h=>h.floor && h.floor===store.curGrp?.id);
     if (here.length===1 && store.searchHits.length===1) { store.searchOpen=false; actions.focusLevel(here[0].slot, here[0].warehouse); }
@@ -1644,7 +2047,7 @@ const actions = {
     store.searchQuery='';
     store.searchHits=[];
     store.searchOpen=false;
-    if (store.curView==='3d') engine.buildScene(store.slots);
+    if (store.curView==='3d') redraw();
   },
 
   async goToHit(h) {
@@ -1693,7 +2096,7 @@ const actions = {
       store.slots = (await call('get_slots',{group_warehouse:store.curGrp.id})) || [];
       store.imAllItems = {};
       if (store.curView==='3d') {
-        engine.buildScene(filteredSlots());
+        redraw();
         if (keep && engine.meshMap[keep]) {
           engine.highlight(keep);
           if (store.dpOpen) store.dpData = engine.meshMap[keep];
@@ -1837,35 +2240,83 @@ const actions = {
 /* ─────────────────────────────────────────────────────────────
    COMPONENT: Sidebar
 ───────────────────────────────────────────────────────────── */
+const TreeNode = defineComponent({
+  name: 'TreeNode',
+  props: { node: Object, depth: Number },
+  setup(props) {
+    const shown = computed(()=>{
+      const f = store.treeFilter.trim().toLowerCase();
+      if (!f) return true;
+      const own = (props.node.label||'').toLowerCase().includes(f) || (props.node.id||'').toLowerCase().includes(f);
+      const below = (id)=> (store.treeKids[id]||[]).some(k=>(k.label||'').toLowerCase().includes(f) || below(k.id));
+      return own || below(props.node.id);
+    });
+    return { store, actions, shown };
+  },
+  template: `
+    <div v-if="shown" class="wt-t">
+      <div :class="['wt-t-row', store.treeSel===node.id?'act':'', node.type==='Floor'?'floor':'']"
+        :style="{paddingLeft:(6+depth*13)+'px'}" :title="node.id" @click="actions.clickNode(node)">
+        <span class="wt-t-tw" @click.stop="node.children && actions.toggleNode(node)">{{
+          node.children ? (store.treeLoading[node.id] ? '…' : store.treeOpen[node.id] ? '▾' : '▸') : '·' }}</span>
+        <span class="wt-t-name">{{node.label}}</span>
+        <span class="wt-t-meta" v-if="depth===0 && store.treeCompanies>1">{{node.company}}</span>
+        <span class="wt-t-meta" v-else-if="node.type==='Floor'">{{node.slot_count||0}} {{l('Slot', (node.slot_count||0)!==1, node.ws)}}</span>
+        <span class="wt-t-meta" v-else-if="node.type">{{L(node.type, false, node.ws)}}</span>
+        <span class="wt-t-meta" v-else-if="node.children">{{node.children}}</span>
+      </div>
+      <template v-if="store.treeOpen[node.id]">
+        <TreeNode v-for="k in (store.treeKids[node.id]||[])" :key="k.id" :node="k" :depth="depth+1"/>
+      </template>
+    </div>
+  `,
+});
+
+// the left pane's width: dragged from its right edge, remembered on this device
+const SBW_KEY = 'wt3d_sidebar_width';
+function setSidebarWidth(px) {
+  const w = Math.max(240, Math.min(560, Math.round(px)));
+  document.getElementById('wt-app')?.style.setProperty('--wt-sbw', w + 'px');
+  return w;
+}
+
 const Sidebar = defineComponent({
   name: 'Sidebar',
+  components: { TreeNode },
   setup() {
-    const byParent = computed(()=>{
-      const m={};
-      store.groups.forEach(g=>{
-        const k=g.parent_name||'Root';
-        if(!m[k]) m[k]=[];
-        m[k].push(g);
-      });
-      return m;
+    const grip = ref(false);
+    onMounted(()=>{
+      let saved = 0;
+      try { saved = parseInt(localStorage.getItem(SBW_KEY)) || 0; } catch(e) { /* private window */ }
+      if (saved) setSidebarWidth(saved);
     });
-    return { store, byParent, actions };
+    function startResize(e) {
+      e.preventDefault();
+      grip.value = true;
+      const left = document.getElementById('wt-app').getBoundingClientRect().left;
+      let w = 0;
+      const move = (ev)=>{ w = setSidebarWidth((ev.touches ? ev.touches[0].clientX : ev.clientX) - left); };
+      const up = ()=>{
+        grip.value = false;
+        window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up);
+        window.removeEventListener('touchmove', move); window.removeEventListener('touchend', up);
+        try { if (w) localStorage.setItem(SBW_KEY, w); } catch(err) { /* private window */ }
+      };
+      window.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+      window.addEventListener('touchmove', move, {passive:false}); window.addEventListener('touchend', up);
+    }
+    return { store, actions, grip, startResize };
   },
   template: `
     <div>
       <div id="wt-sb-overlay" :class="store.sidebarOpen?'show':''" @click="actions.toggleSidebar()"></div>
       <div id="wt-sb" :class="store.sidebarOpen?'mobile-open':''">
+        <div id="wt-sb-grip" :class="grip?'on':''" @mousedown="startResize" @touchstart="startResize" title="Drag to resize"></div>
         <div class="wt-sb-brand">Warehouse 3D</div>
+        <div class="wt-t-filter"><input v-model="store.treeFilter" placeholder="Filter warehouses"></div>
         <div id="wt-sb-list">
-          <template v-for="(gs, parent) in byParent" :key="parent">
-            <span class="wt-sb-label">{{parent}}</span>
-            <div v-for="g in gs" :key="g.id"
-              :class="['wt-g-item', store.curGrp?.id===g.id?'act':'']"
-              @click="actions.selectGroup(g)">
-              <span class="wt-g-name">{{g.name}}</span>
-              <span class="wt-g-meta">{{g.slot_count||0}} {{l('Slot', (g.slot_count||0) !== 1, g.ws)}}</span>
-            </div>
-          </template>
+          <TreeNode v-for="r in store.treeRoots" :key="r.id" :node="r" :depth="0"/>
+          <div v-if="!store.treeRoots.length" class="wt-t-empty">No warehouses to show</div>
         </div>
         <div class="wt-sb-foot" v-if="store.canEdit">
           <button class="wt-sb-btn" style="margin-bottom:6px"
@@ -1881,6 +2332,46 @@ const Sidebar = defineComponent({
 /* ─────────────────────────────────────────────────────────────
    COMPONENT: TopBar
 ───────────────────────────────────────────────────────────── */
+const MapPanel = defineComponent({
+  name: 'MapPanel',
+  setup() {
+    const sel = computed(()=> store.mapSel ? actions.mapNode(store.mapSel) : null);
+    const isSlot = computed(()=> !!(store.mapSel && store.mapSel.startsWith('slot:')));
+    const dirty = computed(()=> Object.keys(store.mapDirty).length);
+    const num = (v)=> v==null || v==='' ? '' : Math.round(parseFloat(v)*100)/100;
+    const size = (v)=> parseFloat(v) ? num(v) : '';  // 0 is "auto": the map sizes it from what it holds
+    return { store, actions, sel, isSlot, dirty, num, size };
+  },
+  template: `
+    <div>
+      <div v-if="store.mapHover && !store.mapEdit" id="wt-map-hover" :style="{left:(store.mapHover.x+14)+'px', top:(store.mapHover.y+10)+'px'}">
+        {{store.mapHover.label}}<span>double-click to open</span>
+      </div>
+      <div v-if="store.mapMode && store.mapEdit" id="wt-map-panel">
+        <div class="wt-mp-title">Edit layout <span v-if="dirty">· {{dirty}} changed</span></div>
+        <div class="wt-mp-hint">Drag a block on the ground (half-metre steps), or type exact values. Positions are metres from the parent's top-left corner.</div>
+        <template v-if="sel">
+          <div class="wt-mp-name">{{sel.label}}</div>
+          <div class="wt-mp-grid">
+            <label>X (m)<input type="number" step="0.5" :value="num(sel.x)" @change="actions.mapField('x', $event.target.value)"></label>
+            <label>Y (m)<input type="number" step="0.5" :value="num(sel.y)" @change="actions.mapField('y', $event.target.value)"></label>
+            <template v-if="!isSlot">
+              <label>Length (m)<input type="number" step="0.5" min="0" :value="size(sel.length)" placeholder="auto" @change="actions.mapField('length', $event.target.value)"></label>
+              <label>Breadth (m)<input type="number" step="0.5" min="0" :value="size(sel.breadth)" placeholder="auto" @change="actions.mapField('breadth', $event.target.value)"></label>
+              <label>Rotation<select :value="String(sel.rotation||'0')" @change="actions.mapField('rotation', $event.target.value)"><option value="0">0°</option><option value="90">90°</option></select></label>
+            </template>
+          </div>
+        </template>
+        <div v-else class="wt-mp-hint">Click a block to edit it.</div>
+        <div class="wt-mp-btns">
+          <button class="wt-mp-save" :disabled="!dirty" @click="actions.mapSave()">Save layout</button>
+          <button class="wt-mp-cancel" @click="actions.mapCancel()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `,
+});
+
 const TopBar = defineComponent({
   name: 'TopBar',
   setup() {
@@ -1909,7 +2400,9 @@ const TopBar = defineComponent({
           <button :class="['wt-sw-btn', store.curView==='2d'?'act':'']" @click="actions.setView('2d')">⊞ 2D</button>
         </div>
         <button class="wt-theme-btn" @click="actions.toggleTheme()">{{store.isDark?'🌙':'☀️'}}</button>
-        <button v-if="store.curView==='3d' && !store.aisleMode"
+        <button v-if="store.mapMode && store.canEdit && !store.mapEdit" class="wt-sw-btn wt-map-edit-btn"
+          @click="store.mapEdit=true; store.mapHover=null" title="Drag areas and bays to where they stand">✎ Edit layout</button>
+        <button v-if="store.curView==='3d' && !store.aisleMode && !store.mapMode"
           class="wt-sw-btn" style="background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.4);border-radius:6px;height:26px;padding:0 10px"
           @click="actions.enterAisleView()" title="Enter aisle walk-through view">
           👁 Aisle View
@@ -2441,6 +2934,21 @@ const WarehouseFormModal = defineComponent({
               </div>
               <span class="wt-whform-hint" style="display:block;margin:-6px 0 12px">Length × Breadth = area of a floor area (e.g. a scrap pile)</span>
             </template>
+            <div class="wt-whform-row2">
+              <div class="wt-whform-field">
+                <label>X on the map (m)</label>
+                <input type="number" min="0" step="0.5" placeholder="auto" v-model="store.whForm.wt_pos_x"/>
+              </div>
+              <div class="wt-whform-field">
+                <label>Y on the map (m)</label>
+                <input type="number" min="0" step="0.5" placeholder="auto" v-model="store.whForm.wt_pos_y"/>
+              </div>
+              <div class="wt-whform-field">
+                <label>Rotation</label>
+                <select v-model="store.whForm.wt_rotation"><option value="0">0°</option><option value="90">90°</option></select>
+              </div>
+            </div>
+            <span class="wt-whform-hint" style="display:block;margin:-6px 0 12px">Where it stands on its parent's map, in metres from the parent's top-left corner. Blank: the map arranges it. Or drag it with ✎ Edit layout.</span>
 
             <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Level'">
               <label>WT UOM Capacities</label>
@@ -2935,7 +3443,7 @@ const SetupWizard = defineComponent({
 ───────────────────────────────────────────────────────────── */
 const App = defineComponent({
   name: 'WarehouseTheatreVue',
-  components: { Sidebar, TopBar, BottomBar, Tooltip, DetailPanel, ItemModal, ConfigModal, FloorPlanModal, WarehouseManageModal, WarehouseFormModal, WarehouseDeleteConfirm, View3D, View2D, Loading, AislePicker, SetupWizard, Toast },
+  components: { Sidebar, TopBar, BottomBar, Tooltip, MapPanel, DetailPanel, ItemModal, ConfigModal, FloorPlanModal, WarehouseManageModal, WarehouseFormModal, WarehouseDeleteConfirm, View3D, View2D, Loading, AislePicker, SetupWizard, Toast },
   setup(){
     onMounted(async ()=>{
       // Keyboard shortcuts
@@ -2989,6 +3497,7 @@ const App = defineComponent({
         <TopBar/>
         <BottomBar/>
         <Tooltip/>
+        <MapPanel/>
         <DetailPanel/>
         <ItemModal/>
         <ConfigModal/>
@@ -3008,6 +3517,7 @@ const App = defineComponent({
    PUBLIC API  (same interface as wt-app.js)
 ───────────────────────────────────────────────────────────── */
 window.WarehouseTheatre3D = {
+  engine, store, actions,  // for the browser console and UI tests
   init(mountId) {
     // Inject CSS once
     if (!document.getElementById('wt-style')) {
