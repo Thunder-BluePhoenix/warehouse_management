@@ -620,7 +620,7 @@ const CSS = `
 /* ─────────────────────────────────────────────────────────────
    STORE  (shared reactive state)
 ───────────────────────────────────────────────────────────── */
-const FORM_EXTRAS = { custom_wms_settings:'', wt_render_mode:'', wt_bay_type:'', wt_max_weight_kg:0, wt_weight_limit_action:'Warn', wt_length:0, wt_breadth:0 };
+const FORM_EXTRAS = { custom_wms_settings:'', wt_render_mode:'', wt_bay_type:'', wt_max_weight_kg:0, wt_weight_limit_action:'Warn', wt_length:0, wt_breadth:0, wt_pos_x:'', wt_pos_y:'', wt_rotation:'0' };
 
 const store = reactive({
   isDark: true,
@@ -664,7 +664,7 @@ const store = reactive({
   // the map: a warehouse and everything under it, drawn in place; Edit layout drags blocks (metres, half-metre steps)
   mapMode: false, mapRoot: null, mapData: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
   // left pane: the warehouse tree, a level at a time
-  treeRoots: [], treeKids: {}, treeOpen: {}, treeLoading: {}, treeSel: null, treeFilter: '',
+  treeRoots: [], treeCompanies: 1, treeKids: {}, treeOpen: {}, treeLoading: {}, treeSel: null, treeFilter: '',
   aisleMode: false,
   aislePickerOpen: false,
   aisleGaps: [],
@@ -1126,6 +1126,10 @@ class ThreeEngine {
     if (!keepCamera) {
       this.setExtent(Math.max(W, D));
       this.tT=0; this.tP=.5;  // from the front and high: the map reads like a plan, its top edge at the top
+      // far enough that the whole site fits this screen, a narrow phone included
+      const vf=this.camera.fov*Math.PI/360, hf=Math.atan(Math.tan(vf)*(this.camera.aspect||1));
+      const fit=Math.max((W/2)/Math.tan(hf), (D/2)/Math.tan(vf))*1.15;
+      this.maxR=Math.max(this.maxR, fit*1.5); this.tR=fit;
     }
     this._startAnimate();
   }
@@ -1523,6 +1527,7 @@ const actions = {
   async loadTree() {
     try {
       store.treeRoots = (await call('get_tree')) || [];
+      store.treeCompanies = new Set(store.treeRoots.map(r=>r.company)).size;  // more than one: name it on the top rows
       // one level opened, as the tree reads best: the company's warehouses and what they hold
       for (const r of store.treeRoots) if (r.children) await actions.toggleNode(r, true);
     } catch(e) { console.error('WT: tree', e); }
@@ -1859,7 +1864,7 @@ const actions = {
           wt_col: d.wt_col || 0,
           wt_row_gap: d.wt_row_gap || 0,
           uom_capacities: (d.uom_capacities||[]).map(r=>({uom:r.uom, capacity:r.capacity})),
-          custom_wms_settings: d.custom_wms_settings || '', wt_render_mode: d.wt_render_mode || '', wt_bay_type: d.wt_bay_type || '', wt_max_weight_kg: d.wt_max_weight_kg || 0, wt_weight_limit_action: d.wt_weight_limit_action || 'Warn', wt_length: d.wt_length || 0, wt_breadth: d.wt_breadth || 0,
+          custom_wms_settings: d.custom_wms_settings || '', wt_render_mode: d.wt_render_mode || '', wt_bay_type: d.wt_bay_type || '', wt_max_weight_kg: d.wt_max_weight_kg || 0, wt_weight_limit_action: d.wt_weight_limit_action || 'Warn', wt_length: d.wt_length || 0, wt_breadth: d.wt_breadth || 0, wt_pos_x: d.wt_placed ? d.wt_pos_x : '', wt_pos_y: d.wt_placed ? d.wt_pos_y : '', wt_rotation: d.wt_rotation || '0',
         };
       } catch(e) {
         store.whFormError = 'Failed to load warehouse: '+e.message;
@@ -1944,6 +1949,9 @@ const actions = {
       wt_weight_limit_action: store.whForm.wt_weight_limit_action || 'Warn',
       wt_length: store.whForm.wt_length || 0,
       wt_breadth: store.whForm.wt_breadth || 0,
+      wt_pos_x: store.whForm.wt_pos_x === '' ? null : store.whForm.wt_pos_x,
+      wt_pos_y: store.whForm.wt_pos_y === '' ? null : store.whForm.wt_pos_y,
+      wt_rotation: store.whForm.wt_rotation || '0',
     };
     try {
       if (store.whFormMode === 'edit') {
@@ -2248,7 +2256,8 @@ const TreeNode = defineComponent({
         <span class="wt-t-tw" @click.stop="node.children && actions.toggleNode(node)">{{
           node.children ? (store.treeLoading[node.id] ? '…' : store.treeOpen[node.id] ? '▾' : '▸') : '·' }}</span>
         <span class="wt-t-name">{{node.label}}</span>
-        <span class="wt-t-meta" v-if="node.type==='Floor'">{{node.slot_count||0}} {{l('Slot', (node.slot_count||0)!==1, node.ws)}}</span>
+        <span class="wt-t-meta" v-if="depth===0 && store.treeCompanies>1">{{node.company}}</span>
+        <span class="wt-t-meta" v-else-if="node.type==='Floor'">{{node.slot_count||0}} {{l('Slot', (node.slot_count||0)!==1, node.ws)}}</span>
         <span class="wt-t-meta" v-else-if="node.type">{{L(node.type, false, node.ws)}}</span>
         <span class="wt-t-meta" v-else-if="node.children">{{node.children}}</span>
       </div>
@@ -2921,6 +2930,21 @@ const WarehouseFormModal = defineComponent({
               </div>
               <span class="wt-whform-hint" style="display:block;margin:-6px 0 12px">Length × Breadth = area of a floor area (e.g. a scrap pile)</span>
             </template>
+            <div class="wt-whform-row2">
+              <div class="wt-whform-field">
+                <label>X on the map (m)</label>
+                <input type="number" min="0" step="0.5" placeholder="auto" v-model="store.whForm.wt_pos_x"/>
+              </div>
+              <div class="wt-whform-field">
+                <label>Y on the map (m)</label>
+                <input type="number" min="0" step="0.5" placeholder="auto" v-model="store.whForm.wt_pos_y"/>
+              </div>
+              <div class="wt-whform-field">
+                <label>Rotation</label>
+                <select v-model="store.whForm.wt_rotation"><option value="0">0°</option><option value="90">90°</option></select>
+              </div>
+            </div>
+            <span class="wt-whform-hint" style="display:block;margin:-6px 0 12px">Where it stands on its parent's map, in metres from the parent's top-left corner. Blank: the map arranges it. Or drag it with ✎ Edit layout.</span>
 
             <div class="wt-whform-field" v-if="store.whForm.wt_warehouse_type==='Level'">
               <label>WT UOM Capacities</label>

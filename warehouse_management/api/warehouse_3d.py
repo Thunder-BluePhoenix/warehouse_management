@@ -85,6 +85,10 @@ EXTRA_FIELDS = (
 	"wt_breadth",
 	"wt_split_from",
 	"custom_wms_settings",
+	"wt_pos_x",
+	"wt_pos_y",
+	"wt_rotation",
+	"wt_placed",
 )
 
 
@@ -685,8 +689,12 @@ def _set_uom_capacities(doc, rows):
 
 def _set_extra_fields(doc, data):
 	for field in EXTRA_FIELDS:
-		if field in data:
+		if field in data and field != "wt_placed":
 			doc.set(field, data.get(field) or None)
+	if (
+		"wt_pos_x" in data or "wt_pos_y" in data
+	):  # a position typed on the form places it on the map; both blank: auto
+		doc.wt_placed = int(any(data.get(f) not in (None, "") for f in ("wt_pos_x", "wt_pos_y")))
 
 
 @frappe.whitelist()

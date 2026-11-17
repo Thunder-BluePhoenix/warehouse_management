@@ -99,3 +99,13 @@ class TestWarehouseMap(IntegrationTestCase):
 		self.assertRaises(
 			frappe.PermissionError, api.save_positions, json.dumps([{"warehouse": self.area, "x": 1}])
 		)
+
+	def test_position_from_the_warehouse_form(self):
+		api.update_warehouse(self.gate, json.dumps({"wt_pos_x": 5, "wt_pos_y": 2.5, "wt_rotation": "90"}))
+		g = next(n for n in api.get_map(self.site)["nodes"] if n["id"] == self.gate)
+		self.assertEqual((g["x"], g["y"], g["rotation"]), (5, 2.5, "90"))
+		api.update_warehouse(
+			self.gate, json.dumps({"wt_pos_x": None, "wt_pos_y": None})
+		)  # both blank: auto again
+		g = next(n for n in api.get_map(self.site)["nodes"] if n["id"] == self.gate)
+		self.assertIsNone(g["x"])
