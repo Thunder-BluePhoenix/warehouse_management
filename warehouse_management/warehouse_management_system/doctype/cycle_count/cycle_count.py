@@ -179,7 +179,8 @@ class CycleCount(Document):
 				"purpose": "Stock Reconciliation",
 				"set_posting_time": 1,
 				"posting_date": counted_at.date(),
-				"posting_time": counted_at.time(),
+				# a str: newer ERPNext type-checks it; microseconds kept so it is not before the count's moves
+				"posting_time": str(counted_at.time()),
 				"expense_account": company.stock_adjustment_account,
 				"cost_center": company.cost_center,
 			}
