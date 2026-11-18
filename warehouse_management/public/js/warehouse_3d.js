@@ -392,16 +392,35 @@ const CSS = `
 #wt-view2d::-webkit-scrollbar-thumb{background:var(--wt-border);border-radius:10px}
 .wt-g-empty{padding:32px;color:var(--wt-text3);font-size:13px}
 .wt-g-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 16px 4px}
-.wt-g-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--wt-text2);min-width:0}
-.wt-g-back{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:6px 12px 6px 8px;border:1px solid var(--wt-border);border-radius:8px;background:var(--wt-bg2);color:var(--wt-text);font:600 12px/1.2 inherit;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.wt-g-back:hover{border-color:var(--wt-accent);color:var(--wt-accent)}
-.wt-g-back>span{font-size:18px;line-height:12px;color:var(--wt-accent)}
-.wt-g-back small{font-weight:400;color:var(--wt-text3)}
-.wt-g-crumbs{flex:1 1 200px}
-.wt-g-crumbs a{cursor:pointer;color:var(--wt-accent);text-decoration:none}
-.wt-g-crumbs a:hover{text-decoration:underline}
-.wt-g-crumbs b{color:var(--wt-text);font-size:14px;word-break:break-word}
-.wt-g-crumbs>span:not(.wt-g-chip){color:var(--wt-text3)}
+.wt-g-nav{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:8px;padding:8px 16px;background:color-mix(in srgb,var(--wt-bg) 88%,transparent);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-bottom:1px solid var(--wt-border)}
+.wt-g-up{flex:0 1 auto;min-width:34px;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 8px;border-radius:8px;border:1px solid var(--wt-border);background:var(--wt-bg2);color:var(--wt-text);font:700 12px/1 inherit;cursor:pointer;max-width:42%;transition:border-color .12s,color .12s,background .12s}
+.wt-g-up svg{flex:none;width:16px;height:16px}
+.wt-g-up span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wt-g-up:hover{border-color:var(--wt-accent);color:var(--wt-accent);background:color-mix(in srgb,var(--wt-accent) 10%,var(--wt-bg2))}
+.wt-g-trail{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:2px;overflow-x:auto;scrollbar-width:none;white-space:nowrap;font-size:12px}
+.wt-g-trail::-webkit-scrollbar{display:none}
+.wt-g-trail a{flex:none;padding:4px 6px;border-radius:6px;color:var(--wt-text2);cursor:pointer;text-decoration:none}
+.wt-g-trail a:hover{background:var(--wt-bg2);color:var(--wt-accent)}
+.wt-g-trail i{flex:none;font-style:normal;color:var(--wt-text3)}
+.wt-g-trail b{flex:none;padding:4px 6px;color:var(--wt-text)}
+.wt-g-sib{flex:0 1 auto;min-width:0;display:flex;align-items:center;border:1px solid var(--wt-border);border-radius:8px;overflow:hidden;background:var(--wt-bg2)}
+.wt-g-sib button{flex:none;width:30px;height:30px;border:0;background:transparent;color:var(--wt-text);font-size:16px;cursor:pointer}
+.wt-g-sib button:hover:not(:disabled){background:color-mix(in srgb,var(--wt-accent) 14%,transparent);color:var(--wt-accent)}
+.wt-g-sib button:disabled{opacity:.3;cursor:default}
+.wt-g-sib select{flex:1 1 auto;min-width:56px;max-width:260px;text-overflow:ellipsis;height:30px;border:0;border-left:1px solid var(--wt-border);border-right:1px solid var(--wt-border);background:transparent;color:var(--wt-text);font:600 12px inherit;padding:0 6px;cursor:pointer}
+.wt-g-sib select option{background:var(--wt-bg2);color:var(--wt-text)}
+.wt-g-title{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 200px}
+.wt-g-title h2{margin:0;font-size:18px;font-weight:800;color:var(--wt-text);word-break:break-word;line-height:1.25}
+.wt-g-flash{animation:wtFlash 1.8s ease-out}
+@keyframes wtFlash{0%,30%{box-shadow:0 0 0 3px var(--wt-accent),0 0 22px color-mix(in srgb,var(--wt-accent) 55%,transparent)}100%{box-shadow:0 0 0 0 transparent}}
+.wt-g-grid.go-down{animation:wtGo .22s ease-out;--gx:0;--gy:10px}
+.wt-g-grid.go-up{animation:wtGo .22s ease-out;--gx:0;--gy:-10px}
+.wt-g-grid.go-next{animation:wtGo .22s ease-out;--gx:16px;--gy:0}
+.wt-g-grid.go-prev{animation:wtGo .22s ease-out;--gx:-16px;--gy:0}
+@keyframes wtGo{from{opacity:0;transform:translate(var(--gx),var(--gy))}}
+@media (prefers-reduced-motion:reduce){.wt-g-grid[class*=go-],.wt-g-flash{animation:none}}
+.wt-g-wrap.cards{height:auto;min-height:100%}
+@media (max-width:600px){.wt-g-nav{padding:6px 10px;gap:6px}.wt-g-up span{display:none}.wt-g-up{padding:0 8px}.wt-g-sib select{max-width:110px}.wt-g-title h2{font-size:16px}}
 .wt-g-meta{font-size:11px;color:var(--wt-text3)}
 .wt-g-chip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;padding:2px 6px;border-radius:5px;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
 .wt-g-chip.sm{font-size:8px;padding:1px 4px}
@@ -3298,9 +3317,56 @@ const View2D = defineComponent({
 
     function open(it){
       if (it.kind==='bay') return actions.open2DModal(it.id);
+      dir.value='down';
       actions.drillMap({id:it.id, label:it.label, type:it.type, render_mode:it.node.render_mode, ws:it.ws});
     }
-    function up(id){ actions.drillMap({id, label:shortWh(id)}); }
+    // moving around: up to a parent, across to the parent's other children; going up brings the card you came from into sight
+    const parent = computed(()=> path.value[path.value.length-1] || null);
+    const trail = computed(()=> path.value.length<=3 ? path.value : [path.value[0], '…', ...path.value.slice(-2)]);
+    const sibs = ref([]), dir = ref(''), cameFrom = ref(null), flash = ref(null); let flashT = 0;
+    watch(parent, async (par)=>{
+      nextTick(()=>{ const t=document.querySelector('#wt-view2d .wt-g-trail'); if (t) t.scrollLeft=t.scrollWidth; });  // a long trail shows its nearest end
+      sibs.value = [];
+      if (!par) return;
+      try { sibs.value = ((await call('get_tree', {parent:par})) || []).filter(n=>n.is_group); } catch(e) { sibs.value = []; }
+    });
+    const sibAt = computed(()=> view.value ? sibs.value.findIndex(n=>n.id===view.value.root.id) : -1);
+    function up(id){
+      if (!id || !view.value) return;
+      const i = path.value.indexOf(id);
+      cameFrom.value = {to:id, from:path.value[i+1] || view.value.root.id}; dir.value='up';
+      actions.drillMap({id, label:shortWh(id)});
+    }
+    function goSib(step){
+      const n = sibs.value[sibAt.value+step];
+      if (!n) return;
+      dir.value = step<0 ? 'prev' : 'next';
+      actions.drillMap({id:n.id, label:n.label||shortWh(n.id), type:n.type, render_mode:n.render_mode, ws:view.value.root.ws});
+    }
+    function goTo(id){ const i=sibs.value.findIndex(n=>n.id===id); if (i>=0) goSib(i-sibAt.value); }
+    watch(()=>view.value && view.value.root.id, ()=>{
+      const cf = cameFrom.value;
+      if (!cf || !view.value || view.value.root.id!==cf.to) return;  // still on the way up: wait for the parent
+      const id = cf.from; cameFrom.value = null;
+      if (store.v2Mode==='plan') return;
+      const i = view.value.cards.findIndex(c=>c.id===id);
+      if (i>=shown.value) shown.value = i+1;
+      nextTick(()=>{
+        const el = [...document.querySelectorAll('#wt-view2d [data-card]')].find(e=>e.dataset.card===id);
+        if (!el) return;
+        el.scrollIntoView({block:'center', behavior:'smooth'});
+        flash.value = id; clearTimeout(flashT); flashT = setTimeout(()=>{ flash.value = null; }, 1900);
+      });
+    });
+    // Alt+↑ goes up, Alt+← / Alt+→ to the previous or next one alongside
+    function onNavKey(e){
+      if (store.curView!=='2d' || !e.altKey || e.target.closest?.('input,textarea,select,[contenteditable]')) return;
+      if (e.key==='ArrowUp' && parent.value) { e.preventDefault(); up(parent.value); }
+      else if (e.key==='ArrowLeft' && sibAt.value>0) { e.preventDefault(); goSib(-1); }
+      else if (e.key==='ArrowRight' && sibAt.value>=0 && sibAt.value<sibs.value.length-1) { e.preventDefault(); goSib(1); }
+    }
+    onMounted(()=>document.addEventListener('keydown', onNavKey));
+    onUnmounted(()=>document.removeEventListener('keydown', onNavKey));
     function setMode(m){ store.v2Mode=m; }
     function fillClr(st){ return st.fill==null ? 'var(--wt-border)' : FCH(st.fill); }
     function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
@@ -3473,20 +3539,35 @@ const View2D = defineComponent({
       if (id && id!==lay.value.root.id && lay.value.nodes[id]) open(nodeItem(lay.value.nodes[id]));
     }
 
-    return { store, actions, view, path, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
+    return { store, actions, view, path, parent, trail, sibs, sibAt, dir, flash, goSib, goTo, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
       TYPE_CLR, TONE_CLR, TONE_NAME, shown, more, TILES, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onLeave, onClick, onDbl, hover, zoomBy, scaleBar, sel };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
       <div v-if="!view" class="wt-g-empty">Pick a warehouse in the tree.</div>
-      <div v-else class="wt-g-wrap">
-        <div class="wt-g-head">
-          <button v-if="path.length" class="wt-g-back" @click="up(path[path.length-1])" :title="'Back to '+shortWh(path[path.length-1])">
-            <span>‹</span><small>Back to</small> {{shortWh(path[path.length-1])}}
+      <div v-else :class="['wt-g-wrap', store.v2Mode!=='plan'?'cards':'']">
+        <nav v-if="parent" class="wt-g-nav" aria-label="Where you are">
+          <button class="wt-g-up" @click="up(parent)" :title="'Up to '+shortWh(parent)+' (Alt+↑)'" aria-label="Up one level">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+            <span>{{shortWh(parent)}}</span>
           </button>
-          <div class="wt-g-crumbs">
-            <template v-for="id in path" :key="id"><a @click="up(id)">{{shortWh(id)}}</a><span>›</span></template>
+          <div class="wt-g-trail">
+            <template v-for="(id,i) in trail" :key="i">
+              <i v-if="id==='…'">…</i><a v-else @click="up(id)" :title="id">{{shortWh(id)}}</a><i>›</i>
+            </template>
             <b>{{view.root.label}}</b>
+          </div>
+          <div v-if="sibs.length>1 && sibAt>=0" class="wt-g-sib">
+            <button :disabled="sibAt<=0" @click="goSib(-1)" :title="sibAt>0?(sibs[sibAt-1].label||sibs[sibAt-1].id)+' (Alt+←)':''" aria-label="Previous">‹</button>
+            <select :value="view.root.id" @change="goTo($event.target.value)" :title="(sibAt+1)+' of '+sibs.length+' in '+shortWh(parent)" aria-label="Jump to">
+              <option v-for="(n,i) in sibs" :key="n.id" :value="n.id">{{i+1}}/{{sibs.length}} · {{n.label||n.id}}</option>
+            </select>
+            <button :disabled="sibAt>=sibs.length-1" @click="goSib(1)" :title="sibAt<sibs.length-1?(sibs[sibAt+1].label||sibs[sibAt+1].id)+' (Alt+→)':''" aria-label="Next">›</button>
+          </div>
+        </nav>
+        <div class="wt-g-head">
+          <div class="wt-g-title">
+            <h2>{{view.root.label}}</h2>
             <span class="wt-g-chip" :style="{'--c':typeClr(view.root.type)}">{{typeName(view.root.type, view.root.ws, view.root.isGroup)}}</span>
           </div>
           <div class="wt-g-modes">
@@ -3505,11 +3586,11 @@ const View2D = defineComponent({
           <span><i class="e"></i>Empty</span>
         </div>
 
-        <div v-if="store.v2Mode!=='plan'" class="wt-g-grid">
+        <div v-if="store.v2Mode!=='plan'" :key="view.root.id" :class="['wt-g-grid', dir?'go-'+dir:'']">
           <div v-if="!view.cards.length" class="wt-g-empty">Nothing inside {{view.root.label}}.</div>
           <template v-for="(c,i) in view.cards.slice(0, shown)" :key="c.id">
             <div v-if="c.group && c.group!==(view.cards[i-1]||{}).group" class="wt-g-zone">{{c.group}}<span>{{view.counts[c.group]}}</span></div>
-            <div :class="['wt-g-card', c.tone?'f-'+c.tone:'', c.st.used?'':'quiet', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
+            <div :data-card="c.id" :class="['wt-g-card', c.tone?'f-'+c.tone:'', flash===c.id?'wt-g-flash':'', c.st.used?'':'quiet', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
               <div class="wt-g-card-hd" role="button" tabindex="0" @click="open(c)" @keydown.enter="open(c)" :title="c.kind==='bay'?'Open the stock':'Open '+c.label">
                 <span class="wt-g-chip" :style="{'--c':typeClr(c.type)}">{{typeName(c.type, c.ws, c.isGroup)}}</span>
                 <span class="wt-g-name">{{c.label}}</span>
