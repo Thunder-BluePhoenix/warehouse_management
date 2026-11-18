@@ -2399,7 +2399,7 @@ const Sidebar = defineComponent({
       <div id="wt-sb-overlay" :class="store.sidebarOpen?'show':''" @click="actions.toggleSidebar()"></div>
       <div id="wt-sb" :class="store.sidebarOpen?'mobile-open':''">
         <div id="wt-sb-grip" :class="grip?'on':''" @mousedown="startResize" @touchstart="startResize" title="Drag to resize"></div>
-        <div class="wt-sb-brand">Warehouse 3D</div>
+        <div class="wt-sb-brand">Warehouse Map</div>
         <div class="wt-t-filter"><input v-model="store.treeFilter" placeholder="Filter warehouses"></div>
         <div id="wt-sb-list">
           <TreeNode v-for="r in store.treeRoots" :key="r.id" :node="r" :depth="0"/>
@@ -3818,7 +3818,7 @@ const SetupWizard = defineComponent({
 
           <div class="wt-setup-actions">
             <span></span>
-            <button class="wt-setup-btn wt-setup-btn-primary" @click="actions.finishSetup()">Open Warehouse 3D →</button>
+            <button class="wt-setup-btn wt-setup-btn-primary" @click="actions.finishSetup()">Open Warehouse Map →</button>
           </div>
         </template>
 
@@ -3873,7 +3873,7 @@ const App = defineComponent({
       <template v-if="store.setupChecking">
         <div class="wt-loading" style="position:relative;height:100%">
           <div class="wt-spinner"></div>
-          <div class="wt-loading-text">Loading Warehouse 3D…</div>
+          <div class="wt-loading-text">Loading Warehouse Map…</div>
         </div>
       </template>
       <template v-else-if="!store.setupComplete">
