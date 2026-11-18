@@ -456,11 +456,17 @@ const CSS = `
 .wt-p-box.sel{stroke-width:3;stroke:var(--wt-accent)}
 .wt-p-bay{cursor:pointer;stroke-width:1;fill-opacity:.6}
 .wt-p-bay.empty{fill:var(--wt-bg);stroke:var(--wt-text3)}
+.wt-p-bay.lvbg{fill:var(--wt-bg)}
 .wt-p-bay:hover{stroke-width:2.6}
 .wt-p-name,.wt-p-type,.wt-p-bayname{paint-order:stroke;stroke:var(--wt-bg);stroke-width:.22em;stroke-linejoin:round}
 .wt-p-name{fill:var(--wt-text);font-weight:800;pointer-events:none}
 .wt-p-type{font-weight:800;text-transform:uppercase;pointer-events:none}
 .wt-p-bayname{fill:var(--wt-text);font-weight:700;pointer-events:none}
+.wt-p-lv{cursor:pointer;stroke:var(--wt-text3);stroke-width:.6;fill-opacity:.75}
+.wt-p-lv.empty{fill:var(--wt-card)}
+.wt-p-lv.thin{stroke:none}
+.wt-p-lv:hover{stroke:var(--wt-accent);stroke-width:2}
+.wt-p-lvname{fill:var(--wt-text);font-weight:800;pointer-events:none;paint-order:stroke;stroke:var(--wt-bg);stroke-width:.2em;stroke-linejoin:round}
 .wt-g-zoom{position:absolute;right:14px;top:10px;display:flex;flex-direction:column;border:1px solid var(--wt-border);border-radius:9px;overflow:hidden;background:var(--wt-bg2);box-shadow:0 4px 14px rgba(0,0,0,.2)}
 .wt-g-zoom button{width:34px;height:32px;border:0;background:transparent;color:var(--wt-text);cursor:pointer;font-size:17px;font-weight:700}
 .wt-g-zoom button+button{border-top:1px solid var(--wt-border)}
@@ -3198,6 +3204,11 @@ function toneOf(st) {
   const p=st.fill;
   return !st.bays?'':!st.used?'empty':p==null?'nocap':p>100?'over':p>=90?'full':p>=70?'high':p>=40?'mid':'low';
 }
+// a level's own part of its name: "RKY-01-P01-B2-L0" in bay "RKY-01-P01-B2" is "L0"
+function lvShort(lv, sl) {
+  const t=String(lv.label||lv.wh).split('/').pop(), b=sl.label||shortWh(sl.wh);
+  return t.startsWith(b) && t.length>b.length ? t.slice(b.length).replace(/^[-_ /]+/, '') || t : t;
+}
 const TYPE_ORDER = ['Building','Floor','Zone','Slot','Level','Tote'];
 const typePlural = (t, ws, isGroup)=> t ? L(t, true, ws) : typeName(t, ws, isGroup)+'s';
 
@@ -3262,6 +3273,11 @@ const View2D = defineComponent({
     }
 
     // infinite scroll: cards are drawn a page at a time, the next page once the end of the list scrolls into sight
+    // a search glides the plan to the first bay it finds
+    watch(hits, (h)=>{
+      if (!h || !h.size || store.v2Mode!=='plan') return;
+      nextTick(()=>{ const el=svgEl.value && [...svgEl.value.querySelectorAll('rect.wt-p-bay')].find(r=>h.has(r.getAttribute('data-bay'))); if (el) zoomTo(el); });
+    });
     const PAGE=40, TILES=24, shown=ref(PAGE), more=ref(null);
     watch(()=>view.value && view.value.root.id, ()=>{ shown.value=PAGE; });
     const io=new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting) && view.value && shown.value<view.value.cards.length) shown.value+=PAGE; }, {rootMargin:'400px'});
@@ -3346,9 +3362,23 @@ const View2D = defineComponent({
           out.push(`<g transform="translate(${.5*s},${.5*s}) scale(${s})">`);
           (n._slots||[]).forEach(sl=>{
             const p=n._layout.places[sl.wh], clr=TONE_CLR[toneOf(stats([sl]))], dim=hits.value && !hits.value.has(sl.wh);
-            out.push(`<rect class="wt-p-bay${clr?'':' empty'}" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15"${clr?` fill="${clr}" stroke="${clr}"`:''} vector-effect="non-scaling-stroke"${dim?' opacity=".2"':''}/>`);
-            const bn=sl.label||shortWh(sl.wh), bfs=Math.min(.45, p.w*.94/(.6*Math.max(4,bn.length)));
-            if (bfs>.12 && readable(bfs*s, 8)) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
+            const lvs=sl.levels||[], showLv=lvs.length>0;  // every bay shows its levels; their names wait until readable
+            const bn=sl.label||shortWh(sl.wh), bfs=Math.min(.45, p.d*(showLv?.15:.4), p.w*.94/(.6*Math.max(4,bn.length)));
+            out.push(`<g${dim?' opacity=".2"':''}>`);
+            out.push(`<rect class="wt-p-bay${!clr?' empty':showLv?' lvbg':''}" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15"${clr?` fill="${clr}" stroke="${clr}"`:''} vector-effect="non-scaling-stroke"/>`);
+            if (showLv) {  // ground level at the bottom, as in the rack
+              const top=p.d*.2, ins=Math.min(p.w, p.d)*.06, hh=(p.d-top-ins)/lvs.length, thin=!readable(hh*s, 4);
+              lvs.forEach((lv, i)=>{
+                const y=p.y+p.d-ins-(i+1)*hh, has=lvHasStock(lv), lc=has?FCH(lvFill(lv)):null;
+                out.push(`<rect class="wt-p-lv${has?'':' empty'}${thin?' thin':''}" data-bay="${escHtml(sl.wh)}" data-lv="${escHtml(lv.wh)}" x="${p.x+ins}" y="${y+hh*.06}" width="${p.w-2*ins}" height="${hh*.88}" rx=".08"${lc?` fill="${lc}"`:''} vector-effect="non-scaling-stroke"/>`);
+                const ln=lvShort(lv, sl), w=p.w-4*ins, tag0=has?(lvTag(lv)||lvQty(lv)):'';
+                const fit=(len)=>Math.min(hh*.55, .3, w/(.6*len));
+                const tag=tag0 && fit(ln.length+tag0.length+1)>=fit(ln.length)*.7 ? tag0 : '', lfs=fit(ln.length+(tag?tag.length+1:0));
+                if (readable(lfs*s, 7)) out.push(`<text class="wt-p-lvname" x="${p.x+ins*2}" y="${y+hh*.5+lfs*.35}" font-size="${lfs}">${escHtml(ln)}${tag?`<tspan dx="${lfs*.6}" font-weight="600">${escHtml(tag)}</tspan>`:''}</text>`);
+              });
+            }
+            if (bfs>.1 && readable(bfs*s, 8)) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${showLv?p.y+p.d*.1+bfs*.35:p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
+            out.push('</g>');
           });
           out.push('</g>');
         } else ks.forEach(k=>draw(k, depth+1));
@@ -3386,7 +3416,10 @@ const View2D = defineComponent({
     function hoverAt(e){
       if (e.pointerType==='touch' || ptrs.size) { hover.value=null; return; }
       const bay=e.target.closest && e.target.closest('[data-bay]'), box=!bay && e.target.closest && e.target.closest('[data-id]');
-      const it = bay && slotByWh.value[bay.getAttribute('data-bay')] ? bayItem(slotByWh.value[bay.getAttribute('data-bay')])
+      const sl=bay && slotByWh.value[bay.getAttribute('data-bay')], lv=sl && sl.levels.find(x=>x.wh===bay.getAttribute('data-lv'));
+      const it = lv ? {kind:'lv', label:(sl.label||shortWh(sl.wh))+' › '+lvShort(lv, sl), type:'Level', ws:sl.ws, lv,
+          st:{bays:1, used:lvHasStock(lv)?1:0, fill:lvFill(lv)}}
+        : sl ? bayItem(sl)
         : box && lay.value.nodes[box.getAttribute('data-id')] ? nodeItem(lay.value.nodes[box.getAttribute('data-id')]) : null;
       if (!it) { hover.value=null; return; }
       const r=svgEl.value.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
@@ -3423,6 +3456,7 @@ const View2D = defineComponent({
     function onClick(e){
       if (moved>4) return;
       const bay=e.target.closest('[data-bay]');
+      if (bay && bay.getAttribute('data-lv')) return actions.open2DModalLevel(bay.getAttribute('data-bay'), bay.getAttribute('data-lv'));
       if (bay) return actions.open2DModal(bay.getAttribute('data-bay'));
       const box=e.target.closest('[data-id]');
       if (box) zoomTo(box);
@@ -3518,14 +3552,15 @@ const View2D = defineComponent({
           </div>
           <div v-if="hover" class="wt-g-tip" :style="{left:hover.x+'px', top:hover.y+'px'}">
             <div class="wt-g-tip-hd"><span class="wt-g-chip sm" :style="{'--c':typeClr(hover.it.type)}">{{typeName(hover.it.type, hover.it.ws, hover.it.isGroup)}}</span><b>{{hover.it.label}}</b></div>
-            <div v-if="hover.it.kind==='bay'">{{hover.it.st.used ? fmtUoms(qtyByUom(hover.it.slot.levels), 3) : 'Empty'}}</div>
+            <div v-if="hover.it.kind==='lv'">{{lvHasStock(hover.it.lv) ? (lvTag(hover.it.lv) ? lvTag(hover.it.lv)+' · ' : '')+fmtUoms(qtyByUom([hover.it.lv]), 3) : 'Empty'}}</div>
+            <div v-else-if="hover.it.kind==='bay'">{{hover.it.st.used ? fmtUoms(qtyByUom(hover.it.slot.levels), 3) : 'Empty'}}</div>
             <div v-else-if="hover.it.st.bays">{{hover.it.st.used}}/{{hover.it.st.bays}} {{l('Slot', true, hover.it.ws)}} with stock</div>
             <div v-else>No {{l('Slot', true, hover.it.ws)}} inside</div>
             <template v-if="hover.it.st.fill!=null && hover.it.st.used">
               <div class="wt-g-bar"><i :style="{width:Math.min(hover.it.st.fill,100)+'%', background:fillClr(hover.it.st)}"></i></div>
               <div :style="{color:fillClr(hover.it.st), fontWeight:700}">{{hover.it.st.fill}}% full</div>
             </template>
-            <div class="wt-g-tip-ft">{{hover.it.kind==='bay' ? 'Click to open the stock' : 'Click to zoom · double-click to open'}}</div>
+            <div class="wt-g-tip-ft">{{hover.it.kind!=='node' ? 'Click to open the stock' : 'Click to zoom · double-click to open'}}</div>
           </div>
           <div v-if="scaleBar" class="wt-g-scale"><i :style="{width:scaleBar.px+'px'}"></i>{{scaleBar.label}}</div>
           <div v-if="selItem" class="wt-g-sel">
