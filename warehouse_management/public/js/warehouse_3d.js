@@ -448,20 +448,34 @@ const CSS = `
 .wt-g-plan{position:relative;flex:1;min-height:300px;overflow:hidden}
 .wt-g-plan svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none}
 .wt-g-plan svg:active{cursor:grabbing}
-.wt-p-box{cursor:pointer;stroke-width:1.2}
-.wt-p-box:hover{stroke-width:2.2}
+.wt-p-grid{stroke:var(--wt-border)}
+.wt-p-grid2{stroke:var(--wt-text3);opacity:.35}
+.wt-p-site{fill:none}
+.wt-p-box{cursor:pointer;stroke-width:1.3;transition:stroke-width .1s}
+.wt-p-box:hover{stroke-width:2.6}
 .wt-p-box.sel{stroke-width:3;stroke:var(--wt-accent)}
-.wt-p-bay{cursor:pointer;stroke-width:1}
-.wt-p-bay:hover{stroke-width:2.4}
+.wt-p-bay{cursor:pointer;stroke-width:1;fill-opacity:.6}
+.wt-p-bay.empty{fill:var(--wt-bg);stroke:var(--wt-text3)}
+.wt-p-bay:hover{stroke-width:2.6}
 .wt-p-name,.wt-p-type,.wt-p-bayname{paint-order:stroke;stroke:var(--wt-bg);stroke-width:.22em;stroke-linejoin:round}
 .wt-p-name{fill:var(--wt-text);font-weight:800;pointer-events:none}
 .wt-p-type{font-weight:800;text-transform:uppercase;pointer-events:none}
 .wt-p-bayname{fill:var(--wt-text);font-weight:700;pointer-events:none}
-.wt-g-fit{position:absolute;right:14px;top:10px;width:32px;height:32px;border-radius:8px;border:1px solid var(--wt-border);background:var(--wt-bg2);color:var(--wt-text);cursor:pointer;font-size:16px}
-.wt-g-sel{position:absolute;left:14px;right:60px;top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border-radius:10px;background:var(--wt-bg2);border:1px solid var(--wt-border);font-size:12px;color:var(--wt-text2);max-width:640px}
+.wt-g-zoom{position:absolute;right:14px;top:10px;display:flex;flex-direction:column;border:1px solid var(--wt-border);border-radius:9px;overflow:hidden;background:var(--wt-bg2);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.wt-g-zoom button{width:34px;height:32px;border:0;background:transparent;color:var(--wt-text);cursor:pointer;font-size:17px;font-weight:700}
+.wt-g-zoom button+button{border-top:1px solid var(--wt-border)}
+.wt-g-zoom button:hover{background:var(--wt-pill)}
+.wt-g-sel{position:absolute;left:14px;right:62px;top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border-radius:10px;background:var(--wt-bg2);border:1px solid var(--wt-border);box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px;color:var(--wt-text2);max-width:640px}
 .wt-g-sel b{color:var(--wt-text);word-break:break-word}
 .wt-g-sel button{margin-left:auto;background:var(--wt-accent);color:#fff;border:0;border-radius:7px;padding:4px 12px;font-weight:700;cursor:pointer}
-.wt-g-hint{position:absolute;left:14px;bottom:10px;font-size:10px;color:var(--wt-text3);pointer-events:none}
+.wt-g-tip{position:absolute;z-index:3;width:236px;pointer-events:none;padding:9px 11px;border-radius:10px;background:var(--wt-bg2);border:1px solid var(--wt-border);box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:11px;color:var(--wt-text2);display:flex;flex-direction:column;gap:4px}
+.wt-g-tip-hd{display:flex;align-items:center;gap:6px}
+.wt-g-tip-hd b{color:var(--wt-text);font-size:12px;word-break:break-word}
+.wt-g-tip .wt-g-bar{margin:2px 0 0}
+.wt-g-tip-ft{font-size:9px;color:var(--wt-text3)}
+.wt-g-scale{position:absolute;left:14px;bottom:10px;display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--wt-text2);pointer-events:none}
+.wt-g-scale i{display:block;height:6px;border:2px solid var(--wt-text2);border-top:0}
+.wt-g-hint{position:absolute;right:14px;bottom:10px;font-size:10px;color:var(--wt-text3);pointer-events:none}
 @media (max-width:600px){#wt-view2d{left:0}.wt-g-grid{grid-template-columns:1fr;padding:4px 10px 20px}.wt-g-head{padding:10px 10px 4px}.wt-g-legend{padding:2px 10px 6px}.wt-g-kpis{padding:2px 10px 6px}.wt-g-kpi{min-width:0;padding:3px 8px}.wt-g-hint{display:none}}
 .wt-2d-levels{width:100%;margin-top:5px;display:flex;flex-direction:column;gap:3px}
 .wt-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;background:rgba(100,116,139,.2);color:#94a3b8;white-space:nowrap}.wt-badge.red{background:rgba(248,113,113,.18);color:#f87171}.wt-badge.orange{background:rgba(251,146,60,.18);color:#fb923c}.wt-badge.blue{background:rgba(96,165,250,.18);color:#60a5fa}.wt-badge.green{background:rgba(74,222,128,.18);color:#4ade80}
@@ -3280,26 +3294,51 @@ const View2D = defineComponent({
     watch(()=>[vb.w, vb.h, store.v2Mode, store.curView], remeasure);
     window.addEventListener('resize', remeasure);
     const readable=(size, px)=> !ppm.value || size*ppm.value>=px;
-    function fit(){
+    function fit(smooth){
       if (!lay.value) return;
-      const r=lay.value.root, m=Math.max(r._w, r._d)*.04;
-      Object.assign(vb, {x:-m, y:-m, w:r._w+2*m, h:r._d+2*m});
+      const r=lay.value.root, m=Math.max(r._w, r._d)*.04, t={x:-m, y:-m, w:r._w+2*m, h:r._d+2*m};
+      if (smooth) glide(t); else Object.assign(vb, t);
     }
     watch(()=>lay.value && lay.value.root.id, ()=>{ sel.value=null; fit(); }, {immediate:true});
+    // the grid and scale bar: a round step (0.5 m … 100 m) about 28 px apart at the current zoom
+    const gridStep = computed(()=>{
+      const k = ppm.value || (lay.value ? 980/Math.max(lay.value.root._w, 1) : 10);
+      return [.5,1,2,5,10,20,50,100,200].find(v=>v*k>=28) || 200;
+    });
+    const scaleBar = computed(()=>{
+      if (!ppm.value) return null;
+      const m=[1,2,5,10,20,50,100,200,500].find(v=>v*ppm.value>=70) || 500;
+      return {px:Math.round(m*ppm.value), label:m+' m'};
+    });
+    const FLOOR_LABEL = 1.1;  // metres: the most a Floor's name takes above it
+    const slotByWh = computed(()=> lay.value ? Object.fromEntries(Object.values(lay.value.src.slots).flat().map(sl=>[sl.wh, sl])) : {});
     const planSvg = computed(()=>{
       if (!lay.value) return '';
-      const out=[], kids=lay.value.kids, rootId=lay.value.root.id;
+      const out=[], kids=lay.value.kids, R=lay.value.root, px=1/(ppm.value||10);  // px: one screen pixel in metres
+      const g=gridStep.value, G=g*5, ext=Math.max(R._w, R._d);
+      out.push(`<defs><pattern id="wt-pg" width="${g}" height="${g}" patternUnits="userSpaceOnUse"><path d="M${g} 0H0V${g}" fill="none" class="wt-p-grid" stroke-width="${px}"/></pattern>`
+        +`<pattern id="wt-pG" width="${G}" height="${G}" patternUnits="userSpaceOnUse"><rect width="${G}" height="${G}" fill="url(#wt-pg)"/><path d="M${G} 0H0V${G}" fill="none" class="wt-p-grid2" stroke-width="${px}"/></pattern></defs>`);
+      out.push(`<rect x="${-ext*2}" y="${-ext*2}" width="${ext*5}" height="${ext*5}" fill="url(#wt-pG)"/>`);
       const draw=(n, depth)=>{
         const st=stats(slotsUnder(n)), c=typeClr(n.type), name=n.label||shortWh(n.id), tn=typeName(n.type,n.ws,n.is_group);
-        const ks=kids[n.id]||[], tone=TONE_CLR[toneOf(st)];  // outline: the type; fill: how full (faint when it holds no stock)
-        out.push(`<g transform="translate(${n._x||0},${n._y||0})"${st.hit?'':' opacity=".3"'}>`);
-        out.push(`<rect class="wt-p-box${sel.value===n.id?' sel':''}" data-id="${escHtml(n.id)}" width="${n._w}" height="${n._d}" rx="${Math.min(n._w,n._d)*.02}" fill="${tone&&depth?tone:c}" fill-opacity="${!depth?.03:tone?(ks.length?.12:.28):.07}" stroke="${c}" vector-effect="non-scaling-stroke"><title>${escHtml(name)} · ${escHtml(tn)}${st.bays?` · ${st.used}/${st.bays} with stock`:''}${st.fill!=null?` · ${st.fill}% full`:''}</title></rect>`);
-        if (n.id!==rootId) {  // one line in the room above what it holds: name and type, else the name, else its code
-          const room = ks.length && String(n.rotation)!=='90' ? Math.min(...ks.map(k=>k._y)) : n._d*.25;
-          const size=(txt, extra)=>Math.min(depth<=1?3:1.6, room*.8, n._w*.94/(.56*(txt.length+extra)));
+        const ks=kids[n.id]||[], tone=TONE_CLR[toneOf(st)], rx=Math.min(n._w, n._d, 6*px*4)*.08+2*px;
+        out.push(`<g transform="translate(${n._x||0},${n._y||0})"${st.hit?'':' opacity=".25"'}>`);
+        if (!depth) {  // the open warehouse: its boundary on the grid
+          out.push(`<rect class="wt-p-site" width="${n._w}" height="${n._d}" rx="${rx}" stroke="${c}" stroke-dasharray="${6*px} ${4*px}" stroke-width="${1.5*px}"/>`);
+        } else {  // a block: solid, tinted by how full it is, a strip of its type's colour along the top
+          const base = depth%2 ? 'var(--wt-bg2)' : 'var(--wt-bg3)';
+          const fill = tone ? `color-mix(in srgb,${tone} ${ks.length||n.type!=='Floor'?14:30}%,${base})` : base;
+          out.push(`<rect class="wt-p-box${sel.value===n.id?' sel':''}" data-id="${escHtml(n.id)}" width="${n._w}" height="${n._d}" rx="${rx}" style="fill:${fill}" stroke="${c}" vector-effect="non-scaling-stroke"/>`);
+          out.push(`<rect width="${n._w}" height="${Math.min(4*px, n._d*.25)}" rx="${rx}" fill="${c}" pointer-events="none"/>`);
+          // a Floor's name sits just above it (its racks fill it); anything else's in the room above what it holds,
+          // less the band its Floors' names take
+          const above = n.type==='Floor';
+          const band = ks.some(k=>k.type==='Floor') ? FLOOR_LABEL*1.25 : 0;
+          const room = above ? FLOOR_LABEL/.75 : ks.length && String(n.rotation)!=='90' ? Math.min(...ks.map(k=>k._y))-band : n._d*.3;
+          const size=(txt, extra)=>Math.min(depth<=1?3:1.6, room*.75, n._w*.92/(.56*(txt.length+extra)));
           const code=name.split(' ')[0];
-          const pick=[[name, tn], [name, ''], [code, '']].map(([t, ty])=>({t, ty, fs:size(t, ty?ty.length*.75+2:0)})).find(o=>o.fs>0 && readable(o.fs, 9));
-          if (pick) out.push(`<text class="wt-p-name" x="${pick.fs*.4}" y="${pick.fs*1.02}" font-size="${pick.fs}">${escHtml(pick.t)}${pick.ty?`<tspan class="wt-p-type" dx="${pick.fs*.5}" font-size="${pick.fs*.7}" fill="${c}">${escHtml(pick.ty)}</tspan>`:''}</text>`);
+          const pick=[[name, tn], [name, ''], [code, '']].map(([t, ty])=>({t, ty, fs:size(t, ty?ty.length*.75+2:0)})).find(o=>o.fs>0 && readable(o.fs, 8));
+          if (pick) out.push(`<text class="wt-p-name" x="${above?0:pick.fs*.45}" y="${above?-pick.fs*.3:pick.fs*1.1+3*px}" font-size="${pick.fs}">${escHtml(pick.t)}${pick.ty?`<tspan class="wt-p-type" dx="${pick.fs*.5}" font-size="${pick.fs*.68}" fill="${c}">${escHtml(pick.ty)}</tspan>`:''}</text>`);
         }
         out.push(String(n.rotation)==='90' ? `<g transform="translate(${n._w},0) rotate(90)">` : '<g>');
         if (n.type==='Floor') {
@@ -3307,34 +3346,67 @@ const View2D = defineComponent({
           out.push(`<g transform="translate(${.5*s},${.5*s}) scale(${s})">`);
           (n._slots||[]).forEach(sl=>{
             const p=n._layout.places[sl.wh], clr=TONE_CLR[toneOf(stats([sl]))], dim=hits.value && !hits.value.has(sl.wh);
-            out.push(`<rect class="wt-p-bay" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15" fill="${clr||'none'}" fill-opacity="${clr?.55:0}" stroke="${clr||'#94a3b8'}" vector-effect="non-scaling-stroke"${dim?' opacity=".2"':''}><title>${escHtml(sl.label||sl.wh)}${hasStock(sl)?'\n'+escHtml(fmtUoms(qtyByUom(sl.levels),20)):'\nEmpty'}</title></rect>`);
+            out.push(`<rect class="wt-p-bay${clr?'':' empty'}" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15"${clr?` fill="${clr}" stroke="${clr}"`:''} vector-effect="non-scaling-stroke"${dim?' opacity=".2"':''}/>`);
             const bn=sl.label||shortWh(sl.wh), bfs=Math.min(.45, p.w*.94/(.6*Math.max(4,bn.length)));
             if (bfs>.12 && readable(bfs*s, 8)) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
           });
           out.push('</g>');
-        } else (kids[n.id]||[]).forEach(k=>draw(k, depth+1));
+        } else ks.forEach(k=>draw(k, depth+1));
         out.push('</g></g>');
       };
-      draw(lay.value.root, 0);
+      draw(R, 0);
       return out.join('');
     });
     const selItem = computed(()=>{
       if (!sel.value || !lay.value || !lay.value.nodes[sel.value]) return null;
       return nodeItem(lay.value.nodes[sel.value]);
     });
-    // pan with a drag, zoom with the wheel or a pinch; a tap selects, a double click (or Open) goes in
+    // a glide to a view box: fit, the zoom buttons and a click on a block
+    let anim=0;
+    function glide(t){
+      cancelAnimationFrame(anim);
+      const s={x:vb.x, y:vb.y, w:vb.w, h:vb.h}, t0=performance.now();
+      const step=(now)=>{ const k=Math.min(1, (now-t0)/280), e=1-Math.pow(1-k, 3);
+        for (const key of ['x','y','w','h']) vb[key]=s[key]+(t[key]-s[key])*e;
+        if (k<1) anim=requestAnimationFrame(step); };
+      anim=requestAnimationFrame(step);
+    }
+    function zoomTo(el){  // the block on screen, back into metres (rotation included), with a margin
+      const m=svgEl.value.getScreenCTM().inverse(), r=el.getBoundingClientRect();
+      const a=new DOMPoint(r.left, r.top).matrixTransform(m), b=new DOMPoint(r.right, r.bottom).matrixTransform(m);
+      const w=b.x-a.x, h=b.y-a.y, pad=Math.max(w, h)*.15;
+      glide({x:a.x-pad, y:a.y-pad, w:w+2*pad, h:h+2*pad});
+    }
+    function zoomBy(f){
+      const w=Math.min(Math.max(vb.w*f, 2), lay.value.root._w*4), h=vb.h*w/vb.w;
+      glide({x:vb.x+(vb.w-w)/2, y:vb.y+(vb.h-h)/2, w, h});
+    }
+    // the hover card: what is under the pointer, without waiting for the browser's tooltip
+    const hover = ref(null);
+    function hoverAt(e){
+      if (e.pointerType==='touch' || ptrs.size) { hover.value=null; return; }
+      const bay=e.target.closest && e.target.closest('[data-bay]'), box=!bay && e.target.closest && e.target.closest('[data-id]');
+      const it = bay && slotByWh.value[bay.getAttribute('data-bay')] ? bayItem(slotByWh.value[bay.getAttribute('data-bay')])
+        : box && lay.value.nodes[box.getAttribute('data-id')] ? nodeItem(lay.value.nodes[box.getAttribute('data-id')]) : null;
+      if (!it) { hover.value=null; return; }
+      const r=svgEl.value.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+      hover.value={it, x:x>r.width-260?x-250:x+14, y:y>r.height-120?y-100:y+14};
+    }
+    // pan with a drag, zoom with the wheel or a pinch; a click picks a block and glides to it, a double click (or Open) goes in
     const ptrs=new Map(); let moved=0, pinch=0;
     const unit=()=>{ const r=svgEl.value.getBoundingClientRect(); return Math.max(vb.w/r.width, vb.h/r.height); };
     function zoom(f, cx, cy){
+      cancelAnimationFrame(anim);
       const r=svgEl.value.getBoundingClientRect(), k=unit();
       const px=vb.x+(cx-r.left-(r.width-vb.w/k)/2)*k, py=vb.y+(cy-r.top-(r.height-vb.h/k)/2)*k;  // the point under the pointer stays put
       const w=Math.min(Math.max(vb.w*f, 2), lay.value.root._w*4), s=w/vb.w;
       Object.assign(vb, {x:px-(px-vb.x)*s, y:py-(py-vb.y)*s, w, h:vb.h*s});
     }
-    function onWheel(e){ e.preventDefault(); zoom(Math.exp(e.deltaY*.0015), e.clientX, e.clientY); }
-    function onDown(e){ ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved=0; if (ptrs.size===2) { const [a,b]=[...ptrs.values()]; pinch=Math.hypot(a.x-b.x,a.y-b.y); } }
+    function onWheel(e){ e.preventDefault(); hover.value=null; zoom(Math.exp(e.deltaY*.0015), e.clientX, e.clientY); }
+    function onDown(e){ ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved=0; hover.value=null; if (ptrs.size===2) { const [a,b]=[...ptrs.values()]; pinch=Math.hypot(a.x-b.x,a.y-b.y); } }
     function onMove(e){
-      const p=ptrs.get(e.pointerId); if (!p) return;
+      const p=ptrs.get(e.pointerId); if (!p) return hoverAt(e);
+      cancelAnimationFrame(anim);
       if (ptrs.size===2) {
         ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
         const [a,b]=[...ptrs.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
@@ -3347,12 +3419,14 @@ const View2D = defineComponent({
       ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
     }
     function onUp(e){ ptrs.delete(e.pointerId); if (ptrs.size<2) pinch=0; }
+    function onLeave(e){ onUp(e); hover.value=null; }
     function onClick(e){
       if (moved>4) return;
       const bay=e.target.closest('[data-bay]');
       if (bay) return actions.open2DModal(bay.getAttribute('data-bay'));
       const box=e.target.closest('[data-id]');
-      sel.value = box && box.getAttribute('data-id')!==lay.value.root.id ? box.getAttribute('data-id') : null;
+      if (box) zoomTo(box);
+      sel.value = box ? box.getAttribute('data-id') : null;
     }
     function onDbl(e){
       const box=e.target.closest('[data-id]');
@@ -3361,7 +3435,7 @@ const View2D = defineComponent({
     }
 
     return { store, actions, view, path, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
-      TYPE_CLR, TONE_CLR, TONE_NAME, shown, more, TILES, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onClick, onDbl };
+      TYPE_CLR, TONE_CLR, TONE_NAME, shown, more, TILES, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onLeave, onClick, onDbl, hover, zoomBy, scaleBar, sel };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
@@ -3435,9 +3509,25 @@ const View2D = defineComponent({
 
         <div v-else class="wt-g-plan">
           <svg ref="svgEl" :viewBox="vb.x+' '+vb.y+' '+vb.w+' '+vb.h" preserveAspectRatio="xMidYMid meet"
-            @wheel="onWheel" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp" @pointerleave="onUp"
+            @wheel="onWheel" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp" @pointerleave="onLeave"
             @click="onClick" @dblclick="onDbl" v-html="planSvg"></svg>
-          <button class="wt-g-fit" @click="fit()" title="Fit the whole plan">⤢</button>
+          <div class="wt-g-zoom">
+            <button @click="zoomBy(.6)" title="Zoom in">+</button>
+            <button @click="zoomBy(1/.6)" title="Zoom out">−</button>
+            <button @click="fit(true); sel=null" title="Fit the whole plan">⤢</button>
+          </div>
+          <div v-if="hover" class="wt-g-tip" :style="{left:hover.x+'px', top:hover.y+'px'}">
+            <div class="wt-g-tip-hd"><span class="wt-g-chip sm" :style="{'--c':typeClr(hover.it.type)}">{{typeName(hover.it.type, hover.it.ws, hover.it.isGroup)}}</span><b>{{hover.it.label}}</b></div>
+            <div v-if="hover.it.kind==='bay'">{{hover.it.st.used ? fmtUoms(qtyByUom(hover.it.slot.levels), 3) : 'Empty'}}</div>
+            <div v-else-if="hover.it.st.bays">{{hover.it.st.used}}/{{hover.it.st.bays}} {{l('Slot', true, hover.it.ws)}} with stock</div>
+            <div v-else>No {{l('Slot', true, hover.it.ws)}} inside</div>
+            <template v-if="hover.it.st.fill!=null && hover.it.st.used">
+              <div class="wt-g-bar"><i :style="{width:Math.min(hover.it.st.fill,100)+'%', background:fillClr(hover.it.st)}"></i></div>
+              <div :style="{color:fillClr(hover.it.st), fontWeight:700}">{{hover.it.st.fill}}% full</div>
+            </template>
+            <div class="wt-g-tip-ft">{{hover.it.kind==='bay' ? 'Click to open the stock' : 'Click to zoom · double-click to open'}}</div>
+          </div>
+          <div v-if="scaleBar" class="wt-g-scale"><i :style="{width:scaleBar.px+'px'}"></i>{{scaleBar.label}}</div>
           <div v-if="selItem" class="wt-g-sel">
             <span class="wt-g-chip" :style="{'--c':typeClr(selItem.type)}">{{typeName(selItem.type, selItem.ws, selItem.isGroup)}}</span>
             <b>{{selItem.label}}</b>
@@ -3445,7 +3535,7 @@ const View2D = defineComponent({
             <span v-if="selItem.st.fill!=null" :style="{color:fillClr(selItem.st), fontWeight:700}">{{selItem.st.fill}}% full</span>
             <button @click="open(selItem)">Open ›</button>
           </div>
-          <div class="wt-g-hint">Drag to move · wheel or pinch to zoom · tap to select · double-click to open</div>
+          <div class="wt-g-hint">Drag to move · wheel or pinch to zoom · click to zoom in · double-click to open</div>
         </div>
       </div>
     </div>
