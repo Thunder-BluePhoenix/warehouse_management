@@ -406,7 +406,6 @@ const CSS = `
 .wt-g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:4px 16px 24px;align-items:start}
 .wt-g-zone{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--wt-text2);padding-top:6px;border-bottom:1px solid var(--wt-border)}
 .wt-g-card{background:var(--wt-bg2);border:1.5px solid var(--wt-cb);border-top:3px solid var(--c);border-radius:12px;padding:10px;min-width:0}
-.wt-g-card.dim,.wt-g-tile.dim{opacity:.3}
 .wt-g-card-hd{display:flex;align-items:center;gap:6px;cursor:pointer}
 .wt-g-card-hd:hover .wt-g-name{color:var(--wt-accent)}
 .wt-g-name{flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--wt-text);word-break:break-word}
@@ -419,15 +418,30 @@ const CSS = `
 .wt-g-tile:hover{border-color:var(--wt-accent)}
 .wt-g-tile-name{font-size:10px;font-weight:700;color:var(--wt-text);word-break:break-word;line-height:1.2}
 .wt-g-tile-meta{font-size:9px;color:var(--wt-text3)}
-.wt-g-card.bay.low,.wt-g-tile.bay.low{background:rgba(74,222,128,.10)}
-.wt-g-card.bay.mid,.wt-g-tile.bay.mid{background:rgba(250,204,21,.10)}
-.wt-g-card.bay.high,.wt-g-tile.bay.high{background:rgba(251,146,60,.12)}
-.wt-g-card.bay.full,.wt-g-tile.bay.full{background:rgba(248,113,113,.12)}
-.wt-g-card.bay.over,.wt-g-tile.bay.over{background:rgba(185,28,28,.2)}
-.wt-g-card.bay.nocap,.wt-g-tile.bay.nocap{background:rgba(100,116,139,.12)}
+.wt-g-card.f-low,.wt-g-tile.f-low{background:rgba(74,222,128,.12)}
+.wt-g-card.f-mid,.wt-g-tile.f-mid{background:rgba(250,204,21,.12)}
+.wt-g-card.f-high,.wt-g-tile.f-high{background:rgba(251,146,60,.14)}
+.wt-g-card.f-full,.wt-g-tile.f-full{background:rgba(248,113,113,.14)}
+.wt-g-card.f-over,.wt-g-tile.f-over{background:rgba(185,28,28,.22)}
+.wt-g-card.f-nocap,.wt-g-tile.f-nocap{background:rgba(100,116,139,.14)}
+.wt-g-card{transition:box-shadow .12s,opacity .12s}
+.wt-g-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.wt-g-card.quiet{opacity:.6}
+.wt-g-card.quiet:hover,.wt-g-card.quiet:focus-within{opacity:1}
+.wt-g-card.dim,.wt-g-tile.dim{opacity:.25}
+.wt-g-card-hd:focus-visible,.wt-g-tile:focus-visible{outline:2px solid var(--wt-accent);outline-offset:2px;border-radius:6px}
+.wt-g-zone span{color:var(--wt-text3);font-weight:700;margin-left:4px}
+.wt-g-kpis{display:flex;flex-wrap:wrap;gap:6px;padding:2px 16px 8px}
+.wt-g-kpi{display:flex;flex-direction:column;align-items:center;min-width:58px;padding:4px 10px;border-radius:8px;background:var(--wt-bg2);border:1px solid var(--wt-border)}
+.wt-g-kpi b{font-size:15px;line-height:1.2;color:var(--wt-text)}
+.wt-g-kpi span{font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--wt-text3);white-space:nowrap}
+.wt-g-lg-t{font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--wt-text2)}
+.wt-g-lg-t:not(:first-child){margin-left:8px}
+.wt-g-legend i.ring{background:transparent;border:2px solid var(--c)}
+.wt-g-legend i.e{background:transparent;border:1px solid var(--wt-text3)}
 .wt-g-wrap{display:flex;flex-direction:column;height:100%}
-.wt-g-head,.wt-g-legend,.wt-g-grid{flex:none}
-.wt-g-plan{position:relative;flex:1;min-height:300px}
+.wt-g-head,.wt-g-kpis,.wt-g-legend,.wt-g-grid{flex:none}
+.wt-g-plan{position:relative;flex:1;min-height:300px;overflow:hidden}
 .wt-g-plan svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none}
 .wt-g-plan svg:active{cursor:grabbing}
 .wt-p-box{cursor:pointer;stroke-width:1.2}
@@ -444,7 +458,7 @@ const CSS = `
 .wt-g-sel b{color:var(--wt-text);word-break:break-word}
 .wt-g-sel button{margin-left:auto;background:var(--wt-accent);color:#fff;border:0;border-radius:7px;padding:4px 12px;font-weight:700;cursor:pointer}
 .wt-g-hint{position:absolute;left:14px;bottom:10px;font-size:10px;color:var(--wt-text3);pointer-events:none}
-@media (max-width:600px){#wt-view2d{left:0}.wt-g-grid{grid-template-columns:1fr;padding:4px 10px 20px}.wt-g-head{padding:10px 10px 4px}.wt-g-legend{padding:2px 10px 6px}.wt-g-hint{display:none}}
+@media (max-width:600px){#wt-view2d{left:0}.wt-g-grid{grid-template-columns:1fr;padding:4px 10px 20px}.wt-g-head{padding:10px 10px 4px}.wt-g-legend{padding:2px 10px 6px}.wt-g-kpis{padding:2px 10px 6px}.wt-g-kpi{min-width:0;padding:3px 8px}.wt-g-hint{display:none}}
 .wt-2d-levels{width:100%;margin-top:5px;display:flex;flex-direction:column;gap:3px}
 .wt-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;background:rgba(100,116,139,.2);color:#94a3b8;white-space:nowrap}.wt-badge.red{background:rgba(248,113,113,.18);color:#f87171}.wt-badge.orange{background:rgba(251,146,60,.18);color:#fb923c}.wt-badge.blue{background:rgba(96,165,250,.18);color:#60a5fa}.wt-badge.green{background:rgba(74,222,128,.18);color:#4ade80}
 .wt-2d-lv-row{display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:4px;background:rgba(255,255,255,.05);cursor:pointer;transition:background .12s}
@@ -3140,6 +3154,15 @@ function typeClr(t) { return TYPE_CLR[t] || '#94a3b8'; }
 function typeName(t, ws, isGroup) { return t ? L(t, false, ws) : (isGroup===0 ? 'Warehouse' : 'Group'); }
 function escHtml(v) { return String(v==null?'':v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const byName = (a,b)=>String(a).localeCompare(String(b), undefined, {numeric:true});
+// How full a warehouse or bay is, in a word ('' when it holds no bays): the same bands as the 3D colours
+const TONE_CLR = {low:'#22c55e', mid:'#eab308', high:'#f97316', full:'#ef4444', over:'#b91c1c', nocap:'#64748b'};
+const TONE_NAME = {low:'Low', mid:'Mid', high:'High', full:'Full', over:'Over', nocap:'No capacity'};
+function toneOf(st) {
+  const p=st.fill;
+  return !st.bays?'':!st.used?'empty':p==null?'nocap':p>100?'over':p>=90?'full':p>=70?'high':p>=40?'mid':'low';
+}
+const TYPE_ORDER = ['Building','Floor','Zone','Slot','Level','Tote'];
+const typePlural = (t, ws, isGroup)=> t ? L(t, true, ws) : typeName(t, ws, isGroup)+'s';
 
 const View2D = defineComponent({
   name: 'View2D',
@@ -3162,13 +3185,11 @@ const View2D = defineComponent({
         fill: known.length ? Math.round(known.reduce((a,b)=>a+b,0)/known.length) : null,
         hit: !hits.value || slots.some(s=>hits.value.has(s.wh))};
     }
-    function tileCls(sl){
-      const fp=slotFill(sl);
-      return !hasStock(sl)?'empty':fp==null?'nocap':fp>100?'over':fp>=90?'full':fp>=70?'high':fp>=40?'mid':'low';
-    }
-    const nodeItem = (n)=>({kind:'node', id:n.id, label:n.label||shortWh(n.id), type:n.type, isGroup:n.is_group, ws:n.ws, node:n, st:stats(slotsUnder(n))});
-    const bayItem = (sl)=>({kind:'bay', id:sl.wh, label:sl.label||shortWh(sl.wh), type:'Slot', ws:sl.ws, slot:sl,
-      zone:(sl.zone_path||[]).join(' › '), st:stats([sl]), cls:tileCls(sl)});
+    const nodeItem = (n)=>{ const st=stats(slotsUnder(n));
+      return {kind:'node', id:n.id, label:n.label||shortWh(n.id), type:n.type, isGroup:n.is_group, ws:n.ws, node:n, st, tone:toneOf(st)}; };
+    const bayItem = (sl)=>{ const st=stats([sl]);
+      return {kind:'bay', id:sl.wh, label:sl.label||shortWh(sl.wh), type:'Slot', ws:sl.ws, slot:sl,
+        group:(sl.zone_path||[]).join(' › '), st, tone:toneOf(st)}; };
     function childrenOf(it){
       if (it.kind==='bay') return [];
       if (it.type==='Floor') return [...(lay.value.src.slots[it.id]||[])]
@@ -3179,8 +3200,29 @@ const View2D = defineComponent({
     const view = computed(()=>{
       if (!lay.value) return null;
       const root = nodeItem(lay.value.root);
-      return {root, cards: childrenOf(root).map(c=>({...c, kids: childrenOf(c)}))};
+      const cards = childrenOf(root).map(c=>({...c, kids: childrenOf(c)}));
+      if (root.type!=='Floor') {  // bays keep their order on the floor; anything else: by type, the busiest first
+        const rank=(c)=>{ const i=TYPE_ORDER.indexOf(c.type); return i<0 ? TYPE_ORDER.length+(c.isGroup===0?1:0) : i; };
+        cards.sort((a,b)=> rank(a)-rank(b) || b.st.used-a.st.used || (b.st.fill||0)-(a.st.fill||0) || b.st.bays-a.st.bays || byName(a.label,b.label));
+        cards.forEach(c=>{ c.group=typePlural(c.type, c.ws, c.isGroup); });
+      }
+      const counts={};
+      cards.forEach(c=>{ if (c.group) counts[c.group]=(counts[c.group]||0)+1; });
+      return {root, cards, counts, kpis:kpisOf(root)};
     });
+    // the summary strip: what is inside the open warehouse, every level down, and how its bays are used
+    function kpisOf(root){
+      const per={}, walk=(n)=>(lay.value.kids[n.id]||[]).forEach(k=>{
+        const t=typePlural(k.type, k.ws, k.is_group);
+        per[t]=per[t]||{v:0, one:typeName(k.type, k.ws, k.is_group)}; per[t].v++; walk(k);
+      });
+      walk(root.node);
+      const out=Object.entries(per).map(([many, p])=>({label:p.v===1?p.one:many, v:p.v})), st=root.st;
+      if (st.bays) out.push({label:L('Slot', true, root.ws), v:st.bays},
+        {label:'In use', v:st.used, clr:st.used?TONE_CLR.low:null}, {label:'Empty', v:st.bays-st.used});
+      if (st.fill!=null) out.push({label:'Avg fill', v:st.fill+'%', clr:FCH(st.fill)});
+      return out;
+    }
 
     // the breadcrumb: the open warehouse's parents, each one a click away
     const path = ref([]);
@@ -3202,7 +3244,13 @@ const View2D = defineComponent({
 
     // ── the plan: the same layout as the 3D map, flat and to scale (SVG, metres) ──
     const svgEl = ref(null), vb = reactive({x:0, y:0, w:100, h:60}), sel = ref(null);
-    const BAY_CLR = {low:'#22c55e', mid:'#eab308', high:'#f97316', full:'#ef4444', over:'#b91c1c', nocap:'#64748b'};
+    // screen pixels per metre, measured once a pan or zoom settles: a label too small to read is left out until you zoom in
+    const ppm = ref(0); let ppmT=0;
+    function measure(){ const r=svgEl.value && svgEl.value.getBoundingClientRect(); if (r && r.width) ppm.value=Math.min(r.width/vb.w, r.height/vb.h); }
+    const remeasure=()=>{ clearTimeout(ppmT); ppmT=setTimeout(measure, 120); };
+    watch(()=>[vb.w, vb.h, store.v2Mode, store.curView], remeasure);
+    window.addEventListener('resize', remeasure);
+    const readable=(size, px)=> !ppm.value || size*ppm.value>=px;
     function fit(){
       if (!lay.value) return;
       const r=lay.value.root, m=Math.max(r._w, r._d)*.04;
@@ -3213,23 +3261,26 @@ const View2D = defineComponent({
       if (!lay.value) return '';
       const out=[], kids=lay.value.kids, rootId=lay.value.root.id;
       const draw=(n, depth)=>{
-        const st=stats(slotsUnder(n)), c=typeClr(n.type), name=n.label||shortWh(n.id);
+        const st=stats(slotsUnder(n)), c=typeClr(n.type), name=n.label||shortWh(n.id), tn=typeName(n.type,n.ws,n.is_group);
+        const ks=kids[n.id]||[], tone=TONE_CLR[toneOf(st)];  // outline: the type; fill: how full (faint when it holds no stock)
         out.push(`<g transform="translate(${n._x||0},${n._y||0})"${st.hit?'':' opacity=".3"'}>`);
-        out.push(`<rect class="wt-p-box${sel.value===n.id?' sel':''}" data-id="${escHtml(n.id)}" width="${n._w}" height="${n._d}" rx="${Math.min(n._w,n._d)*.02}" fill="${c}" fill-opacity="${depth?.12:.04}" stroke="${c}" vector-effect="non-scaling-stroke"><title>${escHtml(name)} · ${escHtml(typeName(n.type,n.ws,n.is_group))}${st.bays?` · ${st.used}/${st.bays} with stock`:''}</title></rect>`);
-        if (n.id!==rootId) {
-          const fs=Math.max(.35, Math.min(depth<=1?3:1.6, n._d*.2, n._w*.94/(.6*Math.max(6, name.length))));
-          out.push(`<text class="wt-p-name" x="${fs*.4}" y="${fs*1.15}" font-size="${fs}">${escHtml(name)}</text>`);
-          out.push(`<text class="wt-p-type" x="${fs*.4}" y="${fs*2}" font-size="${fs*.62}" fill="${c}">${escHtml(typeName(n.type,n.ws,n.is_group))}</text>`);
+        out.push(`<rect class="wt-p-box${sel.value===n.id?' sel':''}" data-id="${escHtml(n.id)}" width="${n._w}" height="${n._d}" rx="${Math.min(n._w,n._d)*.02}" fill="${tone&&depth?tone:c}" fill-opacity="${!depth?.03:tone?(ks.length?.12:.28):.07}" stroke="${c}" vector-effect="non-scaling-stroke"><title>${escHtml(name)} · ${escHtml(tn)}${st.bays?` · ${st.used}/${st.bays} with stock`:''}${st.fill!=null?` · ${st.fill}% full`:''}</title></rect>`);
+        if (n.id!==rootId) {  // one line in the room above what it holds: name and type, else the name, else its code
+          const room = ks.length && String(n.rotation)!=='90' ? Math.min(...ks.map(k=>k._y)) : n._d*.25;
+          const size=(txt, extra)=>Math.min(depth<=1?3:1.6, room*.8, n._w*.94/(.56*(txt.length+extra)));
+          const code=name.split(' ')[0];
+          const pick=[[name, tn], [name, ''], [code, '']].map(([t, ty])=>({t, ty, fs:size(t, ty?ty.length*.75+2:0)})).find(o=>o.fs>0 && readable(o.fs, 9));
+          if (pick) out.push(`<text class="wt-p-name" x="${pick.fs*.4}" y="${pick.fs*1.02}" font-size="${pick.fs}">${escHtml(pick.t)}${pick.ty?`<tspan class="wt-p-type" dx="${pick.fs*.5}" font-size="${pick.fs*.7}" fill="${c}">${escHtml(pick.ty)}</tspan>`:''}</text>`);
         }
         out.push(String(n.rotation)==='90' ? `<g transform="translate(${n._w},0) rotate(90)">` : '<g>');
         if (n.type==='Floor') {
           const s=n._scale||1;
           out.push(`<g transform="translate(${.5*s},${.5*s}) scale(${s})">`);
           (n._slots||[]).forEach(sl=>{
-            const p=n._layout.places[sl.wh], cls=tileCls(sl), dim=hits.value && !hits.value.has(sl.wh);
-            out.push(`<rect class="wt-p-bay" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15" fill="${BAY_CLR[cls]||'none'}" fill-opacity="${cls==='empty'?0:.55}" stroke="${BAY_CLR[cls]||'#94a3b8'}" vector-effect="non-scaling-stroke"${dim?' opacity=".2"':''}><title>${escHtml(sl.label||sl.wh)}${hasStock(sl)?'\n'+escHtml(fmtUoms(qtyByUom(sl.levels),20)):'\nEmpty'}</title></rect>`);
+            const p=n._layout.places[sl.wh], clr=TONE_CLR[toneOf(stats([sl]))], dim=hits.value && !hits.value.has(sl.wh);
+            out.push(`<rect class="wt-p-bay" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15" fill="${clr||'none'}" fill-opacity="${clr?.55:0}" stroke="${clr||'#94a3b8'}" vector-effect="non-scaling-stroke"${dim?' opacity=".2"':''}><title>${escHtml(sl.label||sl.wh)}${hasStock(sl)?'\n'+escHtml(fmtUoms(qtyByUom(sl.levels),20)):'\nEmpty'}</title></rect>`);
             const bn=sl.label||shortWh(sl.wh), bfs=Math.min(.45, p.w*.94/(.6*Math.max(4,bn.length)));
-            if (bfs>.12) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
+            if (bfs>.12 && readable(bfs*s, 8)) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
           });
           out.push('</g>');
         } else (kids[n.id]||[]).forEach(k=>draw(k, depth+1));
@@ -3281,7 +3332,7 @@ const View2D = defineComponent({
     }
 
     return { store, actions, view, path, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
-      TYPE_CLR, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onClick, onDbl };
+      TYPE_CLR, TONE_CLR, TONE_NAME, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onClick, onDbl };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
@@ -3292,23 +3343,29 @@ const View2D = defineComponent({
             <template v-for="id in path" :key="id"><a @click="up(id)">{{shortWh(id)}}</a><span>›</span></template>
             <b>{{view.root.label}}</b>
             <span class="wt-g-chip" :style="{'--c':typeClr(view.root.type)}">{{typeName(view.root.type, view.root.ws, view.root.isGroup)}}</span>
-            <span class="wt-g-meta" v-if="view.root.st.bays">{{view.root.st.used}}/{{view.root.st.bays}} {{l('Slot', true, view.root.ws)}} with stock</span>
           </div>
           <div class="wt-g-modes">
             <button :class="{on:store.v2Mode!=='plan'}" @click="setMode('cards')">▦ Cards</button>
             <button :class="{on:store.v2Mode==='plan'}" @click="setMode('plan')">⌗ Plan</button>
           </div>
         </div>
+        <div v-if="view.kpis.length" class="wt-g-kpis">
+          <div v-for="k in view.kpis" :key="k.label" class="wt-g-kpi"><b :style="k.clr?{color:k.clr}:null">{{k.v}}</b><span>{{k.label}}</span></div>
+        </div>
         <div class="wt-g-legend">
-          <span v-for="(c,t) in TYPE_CLR" :key="t"><i :style="{background:c}"></i>{{L(t, false, view.root.ws)}}</span>
+          <span class="wt-g-lg-t">Type</span>
+          <span v-for="(c,t) in TYPE_CLR" :key="t"><i class="ring" :style="{'--c':c}"></i>{{L(t, false, view.root.ws)}}</span>
+          <span class="wt-g-lg-t">Fill</span>
+          <span v-for="(c,t) in TONE_CLR" :key="t"><i :style="{background:c}"></i>{{TONE_NAME[t]}}</span>
+          <span><i class="e"></i>Empty</span>
         </div>
 
         <div v-if="store.v2Mode!=='plan'" class="wt-g-grid">
           <div v-if="!view.cards.length" class="wt-g-empty">Nothing inside {{view.root.label}}.</div>
           <template v-for="(c,i) in view.cards" :key="c.id">
-            <div v-if="c.zone && c.zone!==(view.cards[i-1]||{}).zone" class="wt-g-zone">{{c.zone}}</div>
-            <div :class="['wt-g-card', c.kind==='bay'?'bay '+c.cls:'', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
-              <div class="wt-g-card-hd" @click="open(c)" :title="c.kind==='bay'?'Open the stock':'Open '+c.label">
+            <div v-if="c.group && c.group!==(view.cards[i-1]||{}).group" class="wt-g-zone">{{c.group}}<span>{{view.counts[c.group]}}</span></div>
+            <div :class="['wt-g-card', c.tone?'f-'+c.tone:'', c.st.used?'':'quiet', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
+              <div class="wt-g-card-hd" role="button" tabindex="0" @click="open(c)" @keydown.enter="open(c)" :title="c.kind==='bay'?'Open the stock':'Open '+c.label">
                 <span class="wt-g-chip" :style="{'--c':typeClr(c.type)}">{{typeName(c.type, c.ws, c.isGroup)}}</span>
                 <span class="wt-g-name">{{c.label}}</span>
                 <span class="wt-g-go">{{c.kind==='bay'?'◫':'›'}}</span>
@@ -3317,7 +3374,7 @@ const View2D = defineComponent({
                 <span v-if="c.kind!=='bay'">{{c.kids.length}} inside</span>
                 <span v-if="c.st.bays && c.kind!=='bay'">{{c.st.used}}/{{c.st.bays}} {{l('Slot', true, c.ws)}} with stock</span>
                 <span v-if="c.kind==='bay'">{{c.st.used?fmtUoms(qtyByUom(c.slot.levels),2):'Empty'}}</span>
-                <span v-if="c.st.fill!=null">{{c.st.fill}}% full</span>
+                <span v-if="c.st.fill!=null && c.st.used" :style="{color:fillClr(c.st), fontWeight:700}">{{c.st.fill}}% full</span>
               </div>
               <div class="wt-g-bar"><i :style="{width:(c.st.fill||0)+'%', background:fillClr(c.st)}"></i></div>
               <div v-if="c.kind==='bay'" class="wt-2d-levels">
@@ -3332,8 +3389,8 @@ const View2D = defineComponent({
                 </div>
               </div>
               <div v-else-if="c.kids.length" class="wt-g-tiles">
-                <div v-for="k in c.kids" :key="k.id" :class="['wt-g-tile', k.kind==='bay'?'bay '+k.cls:'', k.st.hit?'':'dim']"
-                  :style="{'--c':typeClr(k.type)}" @click="open(k)"
+                <div v-for="k in c.kids" :key="k.id" :class="['wt-g-tile', k.tone?'f-'+k.tone:'', k.st.hit?'':'dim']"
+                  :style="{'--c':typeClr(k.type)}" role="button" tabindex="0" @click="open(k)" @keydown.enter="open(k)"
                   :title="typeName(k.type,k.ws,k.isGroup)+' · '+k.label+(k.st.bays?' · '+k.st.used+'/'+k.st.bays+' with stock':'')">
                   <span class="wt-g-tile-name">{{k.label}}</span>
                   <span class="wt-g-tile-meta">{{k.kind==='bay' ? (k.st.used?fmtUoms(qtyByUom(k.slot.levels),1):'—') : typeName(k.type,k.ws,k.isGroup)+(k.st.bays?' · '+k.st.used+'/'+k.st.bays:'')}}</span>
@@ -3352,6 +3409,7 @@ const View2D = defineComponent({
             <span class="wt-g-chip" :style="{'--c':typeClr(selItem.type)}">{{typeName(selItem.type, selItem.ws, selItem.isGroup)}}</span>
             <b>{{selItem.label}}</b>
             <span v-if="selItem.st.bays">{{selItem.st.used}}/{{selItem.st.bays}} {{l('Slot', true, selItem.ws)}} with stock</span>
+            <span v-if="selItem.st.fill!=null" :style="{color:fillClr(selItem.st), fontWeight:700}">{{selItem.st.fill}}% full</span>
             <button @click="open(selItem)">Open ›</button>
           </div>
           <div class="wt-g-hint">Drag to move · wheel or pinch to zoom · tap to select · double-click to open</div>
