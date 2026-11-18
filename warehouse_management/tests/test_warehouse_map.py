@@ -3,6 +3,7 @@ site in place with each warehouse's position and size, and the layout editor's s
 
 import json
 import unittest
+import unittest.mock
 
 import frappe
 from frappe.tests import IntegrationTestCase
@@ -65,6 +66,15 @@ class TestWarehouseMap(IntegrationTestCase):
 		self.assertIsNone(ids[self.area]["x"])  # not placed yet: the map arranges it
 		self.assertEqual([s["wh"] for s in m["slots"][self.floor]], self.slots)
 		self.assertEqual(len(m["slots"][self.floor][0]["levels"]), 1)
+
+	def test_map_racks_come_in_pages(self):
+		other = self.make("Pillar B", "Floor", parent=self.area)
+		with unittest.mock.patch.object(api, "MAP_FLOORS", 1):
+			first = api.get_map(self.site)
+			self.assertEqual((list(first["slots"]), first["next"], first["floors"]), ([self.floor], 1, 2))
+			rest = api.get_map(self.site, start=first["next"])
+			self.assertEqual((list(rest["slots"]), rest["next"]), ([other], None))
+			self.assertNotIn("nodes", rest)  # a later page is only the racks
 
 	def test_save_positions(self):
 		saved = api.save_positions(

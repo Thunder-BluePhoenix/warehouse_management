@@ -220,6 +220,8 @@ const CSS = `
 .wt-pv{font-size:13px;font-weight:800;line-height:1.1;color:var(--wt-text)}
 .wt-pl{font-size:8px;color:rgba(255,255,255,.35);font-weight:600;letter-spacing:.4px;margin-top:1px}
 .wt-pill.occ .wt-pv{color:#fb923c}.wt-pill.free .wt-pv{color:#4ade80}.wt-pill.qty .wt-pv{color:#60a5fa;font-size:11px}
+.wt-pill.load{animation:wt-pulse 1.2s ease-in-out infinite}.wt-pill.load .wt-pv{font-size:11px}
+@keyframes wt-pulse{50%{opacity:.5}}
 #wt-bot{position:absolute;bottom:0;left:var(--wt-sbw);right:0;display:flex;align-items:flex-end;justify-content:space-between;padding:9px 14px;background:linear-gradient(to top,rgba(12,14,20,.97) 55%,transparent);z-index:10;pointer-events:none}
 #wt-hint{font-size:9px;color:rgba(255,255,255,.25);line-height:1.8}
 #wt-legend{display:flex;gap:8px;align-items:center}
@@ -416,6 +418,8 @@ const CSS = `
 .wt-g-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:5px}
 .wt-g-tile{display:flex;flex-direction:column;gap:2px;padding:5px 6px;border-radius:7px;cursor:pointer;background:var(--wt-card);border:1px solid var(--wt-cb);border-left:3px solid var(--c);min-width:0}
 .wt-g-tile:hover{border-color:var(--wt-accent)}
+.wt-g-more{border-style:dashed;border-left-width:1px;justify-content:center;text-align:center}
+.wt-g-loadmore{border:0;text-align:center;font-weight:600;color:var(--wt-text3);padding:12px 0}
 .wt-g-tile-name{font-size:10px;font-weight:700;color:var(--wt-text);word-break:break-word;line-height:1.2}
 .wt-g-tile-meta{font-size:9px;color:var(--wt-text3)}
 .wt-g-card.f-low,.wt-g-tile.f-low{background:rgba(74,222,128,.12)}
@@ -699,7 +703,7 @@ const store = reactive({
   threeReady: false,
   sidebarOpen: false,
   // the map: a warehouse and everything under it, drawn in place; Edit layout drags blocks (metres, half-metre steps)
-  mapMode: false, mapRoot: null, mapData: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
+  mapMode: false, mapRoot: null, mapData: null, mapLoading: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
   // left pane: the warehouse tree, a level at a time
   treeRoots: [], treeCompanies: 1, treeKids: {}, treeOpen: {}, treeLoading: {}, treeSel: null, treeFilter: '',
   aisleMode: false,
@@ -1308,6 +1312,7 @@ class ThreeEngine {
 }
 
 const engine = new ThreeEngine();
+let mapSeq = 0;  // the map being loaded: a page that lands after another map (or a Floor) was opened is dropped
 // Where each warehouse of a map goes, in metres from its parent's corner (_x, _y), and its size (_w, _d): placed ones
 // where they were put, the rest packed in rows below; a Floor fits its slots (_layout, _scale). The 3D map and the
 // 2D plan both draw from it. It writes onto data's nodes: pass the 2D view a copy that is not reactive.
@@ -1622,15 +1627,32 @@ const actions = {
     if (Object.keys(store.mapDirty).length && !confirm('Leave the layout without saving it?')) return;
     store.mapMode=true; store.mapRoot=n.id; store.mapEdit=false; store.mapSel=null; store.mapDirty={};
     store.curGrp=null; store.treeSel=n.id; store.dpOpen=false; store.sidebarOpen=false;
-    store.loading=true;
+    store.loading=true; store.mapLoading=null;
+    const seq=++mapSeq;
+    let next=null;
     try {
       const data = await call('get_map',{warehouse:n.id});
+      if (seq!==mapSeq) return;
       store.mapData=data;
       store.slots=Object.values(data.slots||{}).flat();  // the counts at the top cover the whole map
-      if (data.too_many) notify(`Only the first ${Object.keys(data.slots).length} ${l('Floor', true)} are drawn in full`, 'orange');
       if (store.curView==='3d') { redraw(); engine.springIn(); }  // 2D draws itself from mapData
+      next=data.next;
     } catch(e){ console.error('WT: map', e); notify('Could not load the map: '+(e.message||e), 'red'); }
-    finally { store.loading=false; }
+    finally { if (seq===mapSeq) store.loading=false; }
+    // a big site: the rest of the racks come a page at a time, and the map fills in as each one lands
+    const live=()=>seq===mapSeq && store.mapMode && store.mapRoot===n.id;
+    while (next!=null && live()) {
+      store.mapLoading={done:Object.keys(store.mapData.slots).length, total:store.mapData.floors};
+      try {
+        const pg = await call('get_map',{warehouse:n.id, start:next});
+        if (!live()) break;
+        store.mapData={...store.mapData, slots:{...store.mapData.slots, ...pg.slots}};
+        store.slots=Object.values(store.mapData.slots).flat();
+        if (store.curView==='3d' && !store.mapEdit) { const sel=store.mapSel; redraw(true); if (sel) actions.mapSelect(sel); }
+        next=pg.next;
+      } catch(e){ console.error('WT: map page', e); notify('Could not load the rest of the map: '+(e.message||e), 'red'); break; }
+    }
+    if (seq===mapSeq) store.mapLoading=null;
   },
 
   async drillMap(node) {
@@ -2476,6 +2498,7 @@ const TopBar = defineComponent({
         <div class="wt-pill occ"><div class="wt-pv">{{hud.occ}}</div><div class="wt-pl">Active</div></div>
         <div class="wt-pill free"><div class="wt-pv">{{hud.free}}</div><div class="wt-pl">Empty</div></div>
         <div class="wt-pill qty" :title="hud.qtyTitle"><div class="wt-pv">{{hud.qty}}</div><div class="wt-pl">Stock</div></div>
+        <div v-if="store.mapLoading" class="wt-pill load" :title="'Loading the racks a page at a time'"><div class="wt-pv">{{store.mapLoading.done}}/{{store.mapLoading.total}}</div><div class="wt-pl">{{L('Floor', 1)}}…</div></div>
       </div>
     </div>
   `,
@@ -3224,6 +3247,12 @@ const View2D = defineComponent({
       return out;
     }
 
+    // infinite scroll: cards are drawn a page at a time, the next page once the end of the list scrolls into sight
+    const PAGE=40, TILES=24, shown=ref(PAGE), more=ref(null);
+    watch(()=>view.value && view.value.root.id, ()=>{ shown.value=PAGE; });
+    const io=new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting) && view.value && shown.value<view.value.cards.length) shown.value+=PAGE; }, {rootMargin:'400px'});
+    watch(more, (el, old)=>{ if (old) io.unobserve(old); if (el) io.observe(el); });
+
     // the breadcrumb: the open warehouse's parents, each one a click away
     const path = ref([]);
     watch(()=>view.value && view.value.root.id, async (id)=>{
@@ -3332,7 +3361,7 @@ const View2D = defineComponent({
     }
 
     return { store, actions, view, path, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
-      TYPE_CLR, TONE_CLR, TONE_NAME, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onClick, onDbl };
+      TYPE_CLR, TONE_CLR, TONE_NAME, shown, more, TILES, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onClick, onDbl };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
@@ -3362,7 +3391,7 @@ const View2D = defineComponent({
 
         <div v-if="store.v2Mode!=='plan'" class="wt-g-grid">
           <div v-if="!view.cards.length" class="wt-g-empty">Nothing inside {{view.root.label}}.</div>
-          <template v-for="(c,i) in view.cards" :key="c.id">
+          <template v-for="(c,i) in view.cards.slice(0, shown)" :key="c.id">
             <div v-if="c.group && c.group!==(view.cards[i-1]||{}).group" class="wt-g-zone">{{c.group}}<span>{{view.counts[c.group]}}</span></div>
             <div :class="['wt-g-card', c.tone?'f-'+c.tone:'', c.st.used?'':'quiet', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
               <div class="wt-g-card-hd" role="button" tabindex="0" @click="open(c)" @keydown.enter="open(c)" :title="c.kind==='bay'?'Open the stock':'Open '+c.label">
@@ -3389,15 +3418,19 @@ const View2D = defineComponent({
                 </div>
               </div>
               <div v-else-if="c.kids.length" class="wt-g-tiles">
-                <div v-for="k in c.kids" :key="k.id" :class="['wt-g-tile', k.tone?'f-'+k.tone:'', k.st.hit?'':'dim']"
+                <div v-for="k in c.kids.slice(0, TILES)" :key="k.id" :class="['wt-g-tile', k.tone?'f-'+k.tone:'', k.st.hit?'':'dim']"
                   :style="{'--c':typeClr(k.type)}" role="button" tabindex="0" @click="open(k)" @keydown.enter="open(k)"
                   :title="typeName(k.type,k.ws,k.isGroup)+' · '+k.label+(k.st.bays?' · '+k.st.used+'/'+k.st.bays+' with stock':'')">
                   <span class="wt-g-tile-name">{{k.label}}</span>
                   <span class="wt-g-tile-meta">{{k.kind==='bay' ? (k.st.used?fmtUoms(qtyByUom(k.slot.levels),1):'—') : typeName(k.type,k.ws,k.isGroup)+(k.st.bays?' · '+k.st.used+'/'+k.st.bays:'')}}</span>
                 </div>
+                <div v-if="c.kids.length>TILES" class="wt-g-tile wt-g-more" role="button" tabindex="0" @click="open(c)" @keydown.enter="open(c)">
+                  <span class="wt-g-tile-name">+{{c.kids.length-TILES}} more</span><span class="wt-g-tile-meta">Open to see all</span>
+                </div>
               </div>
             </div>
           </template>
+          <div v-if="shown<view.cards.length" ref="more" class="wt-g-zone wt-g-loadmore">Showing {{shown}} of {{view.cards.length}} · scroll for more</div>
         </div>
 
         <div v-else class="wt-g-plan">
