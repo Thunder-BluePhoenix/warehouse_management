@@ -393,6 +393,11 @@ const CSS = `
 .wt-g-empty{padding:32px;color:var(--wt-text3);font-size:13px}
 .wt-g-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 16px 4px}
 .wt-g-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--wt-text2);min-width:0}
+.wt-g-back{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:6px 12px 6px 8px;border:1px solid var(--wt-border);border-radius:8px;background:var(--wt-bg2);color:var(--wt-text);font:600 12px/1.2 inherit;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wt-g-back:hover{border-color:var(--wt-accent);color:var(--wt-accent)}
+.wt-g-back>span{font-size:18px;line-height:12px;color:var(--wt-accent)}
+.wt-g-back small{font-weight:400;color:var(--wt-text3)}
+.wt-g-crumbs{flex:1 1 200px}
 .wt-g-crumbs a{cursor:pointer;color:var(--wt-accent);text-decoration:none}
 .wt-g-crumbs a:hover{text-decoration:underline}
 .wt-g-crumbs b{color:var(--wt-text);font-size:14px;word-break:break-word}
@@ -758,7 +763,7 @@ const store = reactive({
   whDeleting: false,
   whBayTypes: [],
   imAllItems: {},     // level warehouse -> full item list, loaded on demand
-  v2Mode: (()=>{ try { return localStorage.getItem('wt3d_2d_mode')||'cards'; } catch(e) { return 'cards'; } })(),  // 2D: cards or plan
+  v2Mode: 'cards',  // 2D: cards (always where 2D opens) or plan
   searchHits: [],     // serial / batch / item hits across floors (server)
   searchOpen: false,
   toast: null,
@@ -3296,7 +3301,7 @@ const View2D = defineComponent({
       actions.drillMap({id:it.id, label:it.label, type:it.type, render_mode:it.node.render_mode, ws:it.ws});
     }
     function up(id){ actions.drillMap({id, label:shortWh(id)}); }
-    function setMode(m){ store.v2Mode=m; try { localStorage.setItem('wt3d_2d_mode', m); } catch(e) { /* private window */ } }
+    function setMode(m){ store.v2Mode=m; }
     function fillClr(st){ return st.fill==null ? 'var(--wt-border)' : FCH(st.fill); }
     function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
     function lvQty(lv){ return fmtUoms(qtyByUom([lv]), 1); }
@@ -3476,6 +3481,9 @@ const View2D = defineComponent({
       <div v-if="!view" class="wt-g-empty">Pick a warehouse in the tree.</div>
       <div v-else class="wt-g-wrap">
         <div class="wt-g-head">
+          <button v-if="path.length" class="wt-g-back" @click="up(path[path.length-1])" :title="'Back to '+shortWh(path[path.length-1])">
+            <span>‹</span><small>Back to</small> {{shortWh(path[path.length-1])}}
+          </button>
           <div class="wt-g-crumbs">
             <template v-for="id in path" :key="id"><a @click="up(id)">{{shortWh(id)}}</a><span>›</span></template>
             <b>{{view.root.label}}</b>
