@@ -420,6 +420,7 @@ const CSS = `
 @keyframes wtGo{from{opacity:0;transform:translate(var(--gx),var(--gy))}}
 @media (prefers-reduced-motion:reduce){.wt-g-grid[class*=go-],.wt-g-flash{animation:none}}
 .wt-g-wrap.cards{height:auto;min-height:100%}
+.wt-g-nav.wt-nav3d{position:absolute;left:0;right:0;top:46px;z-index:9;border-top:1px solid var(--wt-border)}
 @media (max-width:600px){.wt-g-nav{padding:6px 10px;gap:6px}.wt-g-up span{display:none}.wt-g-up{padding:0 8px}.wt-g-sib select{max-width:110px}.wt-g-title h2{font-size:16px}}
 .wt-g-meta{font-size:11px;color:var(--wt-text3)}
 .wt-g-chip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;padding:2px 6px;border-radius:5px;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
@@ -748,6 +749,7 @@ const store = reactive({
   sidebarOpen: false,
   // the map: a warehouse and everything under it, drawn in place; Edit layout drags blocks (metres, half-metre steps)
   mapMode: false, mapRoot: null, mapData: null, mapLoading: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
+  navDir: '', navFrom: null,  // the nav bar: which way you last moved, and what you came up from
   // left pane: the warehouse tree, a level at a time
   treeRoots: [], treeCompanies: 1, treeKids: {}, treeOpen: {}, treeLoading: {}, treeSel: null, treeFilter: '',
   aisleMode: false,
@@ -3236,8 +3238,108 @@ function lvShort(lv, sl) {
 const TYPE_ORDER = ['Building','Floor','Zone','Slot','Level','Tote'];
 const typePlural = (t, ws, isGroup)=> t ? L(t, true, ws) : typeName(t, ws, isGroup)+'s';
 
+/* ─────────────────────────────────────────────────────────────
+   NAV BAR — where you are, in 3D and 2D alike: up to the parent, the trail to any ancestor, and across to the
+   parent's other children. Going up points out what you came from (2D rings its card, 3D its block).
+───────────────────────────────────────────────────────────── */
+// what is open: the map's root, else the selected Floor
+function navCur(){
+  if (store.mapMode && store.mapData) {
+    const n = store.mapData.nodes.find(x=>x.id===store.mapData.root);
+    return n ? {id:n.id, ws:n.ws} : null;
+  }
+  return store.curGrp ? {id:store.curGrp.id, ws:store.curGrp.ws} : null;
+}
+const NavBar = defineComponent({
+  name: 'NavBar',
+  props: { where: String },
+  setup(props){
+    const cur = computed(()=> navCur());
+    const curId = computed(()=> cur.value && cur.value.id);
+    const path = ref([]), sibs = ref([]);
+    watch(curId, async (id)=>{
+      if (!id) { path.value = []; return; }
+      try { path.value = (await call('get_path', {warehouse:id})) || []; } catch(e) { path.value = []; }
+    }, {immediate:true});
+    const parent = computed(()=> path.value[path.value.length-1] || null);
+    const trail = computed(()=> path.value.length<=3 ? path.value : [path.value[0], '…', ...path.value.slice(-2)]);
+    const bar = ref(null);
+    watch(parent, async (par)=>{
+      nextTick(()=>{ const t=bar.value && bar.value.querySelector('.wt-g-trail'); if (t) t.scrollLeft=t.scrollWidth; });  // a long trail shows its nearest end
+      sibs.value = [];
+      if (!par) return;
+      try { sibs.value = ((await call('get_tree', {parent:par})) || []).filter(n=>n.is_group); } catch(e) { sibs.value = []; }
+    }, {immediate:true});
+    const sibAt = computed(()=> sibs.value.findIndex(n=>n.id===curId.value));
+    const label = computed(()=>{ const s=sibs.value[sibAt.value]; return (s && s.label) || (curId.value ? shortWh(curId.value) : ''); });
+
+    function up(id){
+      if (!id || !curId.value) return;
+      const i = path.value.indexOf(id);
+      store.navFrom = {to:id, from:path.value[i+1] || curId.value}; store.navDir='up';
+      actions.drillMap({id, label:shortWh(id)});
+    }
+    function goSib(step){
+      const n = sibs.value[sibAt.value+step];
+      if (!n) return;
+      store.navDir = step<0 ? 'prev' : 'next';
+      actions.drillMap({id:n.id, label:n.label||shortWh(n.id), type:n.type, render_mode:n.render_mode, ws:cur.value.ws});
+    }
+    function goTo(id){ const i=sibs.value.findIndex(n=>n.id===id); if (i>=0) goSib(i-sibAt.value); }
+
+    // 3D: once the parent is drawn, the block you came from lights up for a moment
+    let lit = 0;
+    watch(()=>store.mapMode && store.mapData && store.mapData.root, (root)=>{
+      const nf = store.navFrom;
+      if (props.where!=='3d' || !nf || root!==nf.to) return;
+      store.navFrom = null;
+      setTimeout(()=>{
+        if (store.mapEdit || !engine.blockMap || !engine.blockMap[nf.from]) return;
+        actions.mapSelect(nf.from);
+        clearTimeout(lit); lit = setTimeout(()=>{ if (store.mapSel===nf.from && !store.mapEdit) actions.mapSelect(null); }, 2200);
+      }, 250);
+    });
+
+    // Alt+↑ goes up, Alt+← / Alt+→ to the previous or next one alongside
+    function onKey(e){
+      if (!e.altKey || e.target.closest?.('input,textarea,select,[contenteditable]')) return;
+      if (e.key==='ArrowUp' && parent.value) { e.preventDefault(); up(parent.value); }
+      else if (e.key==='ArrowLeft' && sibAt.value>0) { e.preventDefault(); goSib(-1); }
+      else if (e.key==='ArrowRight' && sibAt.value>=0 && sibAt.value<sibs.value.length-1) { e.preventDefault(); goSib(1); }
+    }
+    // 3D: the bar sits just under the top bar, which floats over the scene and wraps taller on a phone
+    const topH = ref(46);
+    const measure = ()=>{ const t=document.getElementById('wt-top'); if (t) topH.value = t.offsetHeight; };
+    onMounted(()=>{ document.addEventListener('keydown', onKey); window.addEventListener('resize', measure); measure(); });
+    onUnmounted(()=>{ document.removeEventListener('keydown', onKey); window.removeEventListener('resize', measure); clearTimeout(lit); });
+    return { store, bar, topH, curId, label, parent, trail, sibs, sibAt, up, goSib, goTo, shortWh };
+  },
+  template: `
+    <nav v-if="parent" ref="bar" :class="['wt-g-nav', where==='3d'?'wt-nav3d':'']" :style="where==='3d'?{top:topH+'px'}:null" aria-label="Where you are">
+      <button class="wt-g-up" @click="up(parent)" :title="'Up to '+shortWh(parent)+' (Alt+↑)'" aria-label="Up one level">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
+        <span>{{shortWh(parent)}}</span>
+      </button>
+      <div class="wt-g-trail">
+        <template v-for="(id,i) in trail" :key="i">
+          <i v-if="id==='…'">…</i><a v-else @click="up(id)" :title="id">{{shortWh(id)}}</a><i>›</i>
+        </template>
+        <b>{{label}}</b>
+      </div>
+      <div v-if="sibs.length>1 && sibAt>=0" class="wt-g-sib">
+        <button :disabled="sibAt<=0" @click="goSib(-1)" :title="sibAt>0?(sibs[sibAt-1].label||sibs[sibAt-1].id)+' (Alt+←)':''" aria-label="Previous">‹</button>
+        <select :value="curId" @change="goTo($event.target.value)" :title="(sibAt+1)+' of '+sibs.length+' in '+shortWh(parent)" aria-label="Jump to">
+          <option v-for="(n,i) in sibs" :key="n.id" :value="n.id">{{i+1}}/{{sibs.length}} · {{n.label||n.id}}</option>
+        </select>
+        <button :disabled="sibAt>=sibs.length-1" @click="goSib(1)" :title="sibAt<sibs.length-1?(sibs[sibAt+1].label||sibs[sibAt+1].id)+' (Alt+→)':''" aria-label="Next">›</button>
+      </div>
+    </nav>
+  `,
+});
+
 const View2D = defineComponent({
   name: 'View2D',
+  components: { NavBar },
   setup(){
     // What 2D draws: the open map, else the selected Floor, in the shape get_map returns. A copy: mapLayout writes on it.
     const src = computed(()=>{
@@ -3307,66 +3409,27 @@ const View2D = defineComponent({
     const io=new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting) && view.value && shown.value<view.value.cards.length) shown.value+=PAGE; }, {rootMargin:'400px'});
     watch(more, (el, old)=>{ if (old) io.unobserve(old); if (el) io.observe(el); });
 
-    // the breadcrumb: the open warehouse's parents, each one a click away
-    const path = ref([]);
-    watch(()=>view.value && view.value.root.id, async (id)=>{
-      path.value = [];
-      if (!id) return;
-      try { path.value = (await call('get_path', {warehouse:id})) || []; } catch(e) { path.value = []; }
-    }, {immediate:true});
-
     function open(it){
       if (it.kind==='bay') return actions.open2DModal(it.id);
-      dir.value='down';
+      store.navDir='down';
       actions.drillMap({id:it.id, label:it.label, type:it.type, render_mode:it.node.render_mode, ws:it.ws});
     }
-    // moving around: up to a parent, across to the parent's other children; going up brings the card you came from into sight
-    const parent = computed(()=> path.value[path.value.length-1] || null);
-    const trail = computed(()=> path.value.length<=3 ? path.value : [path.value[0], '…', ...path.value.slice(-2)]);
-    const sibs = ref([]), dir = ref(''), cameFrom = ref(null), flash = ref(null); let flashT = 0;
-    watch(parent, async (par)=>{
-      nextTick(()=>{ const t=document.querySelector('#wt-view2d .wt-g-trail'); if (t) t.scrollLeft=t.scrollWidth; });  // a long trail shows its nearest end
-      sibs.value = [];
-      if (!par) return;
-      try { sibs.value = ((await call('get_tree', {parent:par})) || []).filter(n=>n.is_group); } catch(e) { sibs.value = []; }
-    });
-    const sibAt = computed(()=> view.value ? sibs.value.findIndex(n=>n.id===view.value.root.id) : -1);
-    function up(id){
-      if (!id || !view.value) return;
-      const i = path.value.indexOf(id);
-      cameFrom.value = {to:id, from:path.value[i+1] || view.value.root.id}; dir.value='up';
-      actions.drillMap({id, label:shortWh(id)});
-    }
-    function goSib(step){
-      const n = sibs.value[sibAt.value+step];
-      if (!n) return;
-      dir.value = step<0 ? 'prev' : 'next';
-      actions.drillMap({id:n.id, label:n.label||shortWh(n.id), type:n.type, render_mode:n.render_mode, ws:view.value.root.ws});
-    }
-    function goTo(id){ const i=sibs.value.findIndex(n=>n.id===id); if (i>=0) goSib(i-sibAt.value); }
+    // back up from a child: its card scrolls into sight and rings for a moment
+    const flash = ref(null); let flashT = 0;
     watch(()=>view.value && view.value.root.id, ()=>{
-      const cf = cameFrom.value;
-      if (!cf || !view.value || view.value.root.id!==cf.to) return;  // still on the way up: wait for the parent
-      const id = cf.from; cameFrom.value = null;
+      const nf = store.navFrom;
+      if (store.curView!=='2d' || !nf || !view.value || view.value.root.id!==nf.to) return;  // still on the way up: wait for the parent
+      store.navFrom = null;
       if (store.v2Mode==='plan') return;
-      const i = view.value.cards.findIndex(c=>c.id===id);
+      const i = view.value.cards.findIndex(c=>c.id===nf.from);
       if (i>=shown.value) shown.value = i+1;
       nextTick(()=>{
-        const el = [...document.querySelectorAll('#wt-view2d [data-card]')].find(e=>e.dataset.card===id);
+        const el = [...document.querySelectorAll('#wt-view2d [data-card]')].find(e=>e.dataset.card===nf.from);
         if (!el) return;
         el.scrollIntoView({block:'center', behavior:'smooth'});
-        flash.value = id; clearTimeout(flashT); flashT = setTimeout(()=>{ flash.value = null; }, 1900);
+        flash.value = nf.from; clearTimeout(flashT); flashT = setTimeout(()=>{ flash.value = null; }, 1900);
       });
     });
-    // Alt+↑ goes up, Alt+← / Alt+→ to the previous or next one alongside
-    function onNavKey(e){
-      if (store.curView!=='2d' || !e.altKey || e.target.closest?.('input,textarea,select,[contenteditable]')) return;
-      if (e.key==='ArrowUp' && parent.value) { e.preventDefault(); up(parent.value); }
-      else if (e.key==='ArrowLeft' && sibAt.value>0) { e.preventDefault(); goSib(-1); }
-      else if (e.key==='ArrowRight' && sibAt.value>=0 && sibAt.value<sibs.value.length-1) { e.preventDefault(); goSib(1); }
-    }
-    onMounted(()=>document.addEventListener('keydown', onNavKey));
-    onUnmounted(()=>document.removeEventListener('keydown', onNavKey));
     function setMode(m){ store.v2Mode=m; }
     function fillClr(st){ return st.fill==null ? 'var(--wt-border)' : FCH(st.fill); }
     function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
@@ -3539,32 +3602,14 @@ const View2D = defineComponent({
       if (id && id!==lay.value.root.id && lay.value.nodes[id]) open(nodeItem(lay.value.nodes[id]));
     }
 
-    return { store, actions, view, path, parent, trail, sibs, sibAt, dir, flash, goSib, goTo, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
+    return { store, actions, view, flash, open, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
       TYPE_CLR, TONE_CLR, TONE_NAME, shown, more, TILES, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onLeave, onClick, onDbl, hover, zoomBy, scaleBar, sel };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
       <div v-if="!view" class="wt-g-empty">Pick a warehouse in the tree.</div>
       <div v-else :class="['wt-g-wrap', store.v2Mode!=='plan'?'cards':'']">
-        <nav v-if="parent" class="wt-g-nav" aria-label="Where you are">
-          <button class="wt-g-up" @click="up(parent)" :title="'Up to '+shortWh(parent)+' (Alt+↑)'" aria-label="Up one level">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/></svg>
-            <span>{{shortWh(parent)}}</span>
-          </button>
-          <div class="wt-g-trail">
-            <template v-for="(id,i) in trail" :key="i">
-              <i v-if="id==='…'">…</i><a v-else @click="up(id)" :title="id">{{shortWh(id)}}</a><i>›</i>
-            </template>
-            <b>{{view.root.label}}</b>
-          </div>
-          <div v-if="sibs.length>1 && sibAt>=0" class="wt-g-sib">
-            <button :disabled="sibAt<=0" @click="goSib(-1)" :title="sibAt>0?(sibs[sibAt-1].label||sibs[sibAt-1].id)+' (Alt+←)':''" aria-label="Previous">‹</button>
-            <select :value="view.root.id" @change="goTo($event.target.value)" :title="(sibAt+1)+' of '+sibs.length+' in '+shortWh(parent)" aria-label="Jump to">
-              <option v-for="(n,i) in sibs" :key="n.id" :value="n.id">{{i+1}}/{{sibs.length}} · {{n.label||n.id}}</option>
-            </select>
-            <button :disabled="sibAt>=sibs.length-1" @click="goSib(1)" :title="sibAt<sibs.length-1?(sibs[sibAt+1].label||sibs[sibAt+1].id)+' (Alt+→)':''" aria-label="Next">›</button>
-          </div>
-        </nav>
+        <NavBar v-if="store.curView==='2d'" where="2d"/>
         <div class="wt-g-head">
           <div class="wt-g-title">
             <h2>{{view.root.label}}</h2>
@@ -3586,7 +3631,7 @@ const View2D = defineComponent({
           <span><i class="e"></i>Empty</span>
         </div>
 
-        <div v-if="store.v2Mode!=='plan'" :key="view.root.id" :class="['wt-g-grid', dir?'go-'+dir:'']">
+        <div v-if="store.v2Mode!=='plan'" :key="view.root.id" :class="['wt-g-grid', store.navDir?'go-'+store.navDir:'']">
           <div v-if="!view.cards.length" class="wt-g-empty">Nothing inside {{view.root.label}}.</div>
           <template v-for="(c,i) in view.cards.slice(0, shown)" :key="c.id">
             <div v-if="c.group && c.group!==(view.cards[i-1]||{}).group" class="wt-g-zone">{{c.group}}<span>{{view.counts[c.group]}}</span></div>
@@ -3671,6 +3716,7 @@ const View2D = defineComponent({
 ───────────────────────────────────────────────────────────── */
 const View3D = defineComponent({
   name: 'View3D',
+  components: { NavBar },
   setup(){
     onMounted(()=>{
       const canvas=document.getElementById('wt-c');
@@ -3722,6 +3768,7 @@ const View3D = defineComponent({
   template: `
     <div id="wt-cw" :style="{display:store.curView==='3d'?'block':'none'}">
       <canvas id="wt-c"></canvas>
+      <NavBar v-if="store.curView==='3d'" where="3d"/>
       <div id="wt-aisle-ctrl" :class="store.aisleMode?'show':''">
         <div id="wt-aisle-hint">Drag to look · WASD or buttons to move</div>
         <div class="wt-aisle-pad">
