@@ -315,14 +315,17 @@ def _slots_of(floor, allowed):
 	return slots
 
 
-MAP_FLOORS = 60  # ponytail: a map draws at most this many floors' racks; past it, the floors show as outlines
+# floors' racks sent per call: a big site comes in pages (`start`), the map fills in as they arrive
+MAP_FLOORS = 60
 
 
 @frappe.whitelist()
-def get_map(warehouse: str):
+def get_map(warehouse: str, start: int = 0):
 	"""Everything under `warehouse` for the map view: each warehouse with its position (X, Y in metres from its parent's
 	corner), size (length, breadth) and rotation, and every Floor's slots with their levels and stock, so the whole
-	site is drawn in place. Levels and totes are inside their slots; disabled warehouses are left out."""
+	site is drawn in place. Levels and totes are inside their slots; disabled warehouses are left out.
+	The racks come MAP_FLOORS floors at a time: `next` is the `start` of the next page (None on the last), and a later
+	page (start > 0) carries only `slots` and `next`."""
 	_require_view_permission()
 	frappe.has_permission("Warehouse", "read", warehouse, throw=True)
 	allowed = _permitted_warehouses()
@@ -349,15 +352,19 @@ def get_map(warehouse: str):
 		fb = _floor_bounds(f)
 		inside.update(frappe.get_all("Warehouse", {"lft": [">", fb.lft], "rgt": ["<", fb.rgt]}, pluck="name"))
 	nodes = [n for n in nodes if n.id not in inside and (n.id == warehouse or n.parent in ids)]
+	start = max(int(start or 0), 0)
+	end = start + MAP_FLOORS
+	page = {
+		"slots": {f: _slots_of(f, allowed) for f in floors[start:end]},
+		"next": end if end < len(floors) else None,
+		"floors": len(floors),
+	}
+	if start:
+		return page
 	ws = settings_names([n.id for n in nodes])
 	for n in nodes:
 		n["ws"] = ws.get(n.id)
-	return {
-		"root": warehouse,
-		"nodes": nodes,
-		"slots": {f: _slots_of(f, allowed) for f in floors[:MAP_FLOORS]},
-		"too_many": len(floors) > MAP_FLOORS,
-	}
+	return {"root": warehouse, "nodes": nodes, **page}
 
 
 @frappe.whitelist(methods=["POST"])

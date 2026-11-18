@@ -220,6 +220,8 @@ const CSS = `
 .wt-pv{font-size:13px;font-weight:800;line-height:1.1;color:var(--wt-text)}
 .wt-pl{font-size:8px;color:rgba(255,255,255,.35);font-weight:600;letter-spacing:.4px;margin-top:1px}
 .wt-pill.occ .wt-pv{color:#fb923c}.wt-pill.free .wt-pv{color:#4ade80}.wt-pill.qty .wt-pv{color:#60a5fa;font-size:11px}
+.wt-pill.load{animation:wt-pulse 1.2s ease-in-out infinite}.wt-pill.load .wt-pv{font-size:11px}
+@keyframes wt-pulse{50%{opacity:.5}}
 #wt-bot{position:absolute;bottom:0;left:var(--wt-sbw);right:0;display:flex;align-items:flex-end;justify-content:space-between;padding:9px 14px;background:linear-gradient(to top,rgba(12,14,20,.97) 55%,transparent);z-index:10;pointer-events:none}
 #wt-hint{font-size:9px;color:rgba(255,255,255,.25);line-height:1.8}
 #wt-legend{display:flex;gap:8px;align-items:center}
@@ -388,40 +390,99 @@ const CSS = `
 #wt-view2d{position:absolute;left:var(--wt-sbw);right:0;top:44px;bottom:0;overflow:auto;display:none;background:var(--wt-bg)}
 #wt-view2d::-webkit-scrollbar{width:5px}
 #wt-view2d::-webkit-scrollbar-thumb{background:var(--wt-border);border-radius:10px}
-.wt-2d-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:16px}
-.wt-2d-sec{background:var(--wt-bg2);border-radius:14px;padding:12px;border:1.5px solid var(--wt-cb);box-shadow:0 1px 4px rgba(0,0,0,.06);transition:border-color .15s,box-shadow .15s}
-.wt-2d-sec:hover{border-color:var(--wt-accent);box-shadow:0 4px 14px rgba(49,130,206,.1)}
-.wt-2d-sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid var(--wt-border)}
-.wt-2d-sec-name{font-size:11px;font-weight:800;color:var(--wt-text)}
-.wt-2d-sec-cnt{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap}
-.wt-2d-sec-cnt.red{background:#fff5f5;color:#c53030}
-.wt-2d-sec-cnt.org{background:#fffaf0;color:#c05621}
-.wt-2d-sec-cnt.grn{background:#f0fff4;color:#276749}
-#wt-app.dark .wt-2d-sec-cnt.red{background:rgba(197,48,48,.15);color:#fc8181}
-#wt-app.dark .wt-2d-sec-cnt.org{background:rgba(192,86,33,.15);color:#fbd38d}
-#wt-app.dark .wt-2d-sec-cnt.grn{background:rgba(39,103,73,.15);color:#68d391}
-.wt-2d-sec-cap{height:3px;background:var(--wt-cb);border-radius:2px;margin-bottom:8px;overflow:hidden}
-.wt-2d-sec-cap-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.34,1.56,.64,1)}
-.wt-2d-slots{display:grid;gap:5px}
-.wt-2d-tile{border-radius:8px;padding:7px 5px 5px;display:flex;flex-direction:column;align-items:center;cursor:pointer;text-align:center;border:1.5px solid var(--wt-cb);background:var(--wt-card);transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .12s;position:relative;animation:wt2dIn .35s cubic-bezier(.34,1.56,.64,1) both;height:auto}
-@keyframes wt2dIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
-.wt-2d-tile:hover{transform:translateY(-2px) scale(1.04);box-shadow:0 6px 16px rgba(0,0,0,.14);z-index:2}
-.wt-2d-tile.empty{background:repeating-linear-gradient(-45deg,rgba(0,0,0,.04) 0,rgba(0,0,0,.04) 2px,transparent 2px,transparent 7px);border-color:var(--wt-cb)}
-.wt-2d-tile.low{background:rgba(74,222,128,.12);border-color:#4ade80}
-.wt-2d-tile.mid{background:rgba(250,204,21,.12);border-color:#facc15}
-.wt-2d-tile.high{background:rgba(251,146,60,.12);border-color:#fb923c}
-.wt-2d-tile.full{background:rgba(248,113,113,.12);border-color:#f87171}
-.wt-2d-tile.over{background:rgba(185,28,28,.22);border-color:#b91c1c}
-.wt-2d-tile.nocap{background:rgba(100,116,139,.14);border-color:#64748b}
-#wt-app.light .wt-2d-tile.low{background:#f0fdf4;border-color:#22c55e}
-#wt-app.light .wt-2d-tile.mid{background:#fefce8;border-color:#eab308}
-#wt-app.light .wt-2d-tile.high{background:#fff7ed;border-color:#f97316}
-#wt-app.light .wt-2d-tile.full{background:#fef2f2;border-color:#ef4444}
-.wt-2d-tile-name{font-size:10px;font-weight:800;color:var(--wt-text);line-height:1.2;word-break:break-all}
-.wt-2d-tile.empty .wt-2d-tile-name{color:var(--wt-text3)}
-.wt-2d-tile-qty{font-size:8px;font-weight:600;color:var(--wt-text2);margin-top:2px}
-.wt-2d-tile.empty .wt-2d-tile-qty{color:var(--wt-border)}
-.wt-2d-tile-bar{position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 6px 6px}
+.wt-g-empty{padding:32px;color:var(--wt-text3);font-size:13px}
+.wt-g-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 16px 4px}
+.wt-g-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--wt-text2);min-width:0}
+.wt-g-crumbs a{cursor:pointer;color:var(--wt-accent);text-decoration:none}
+.wt-g-crumbs a:hover{text-decoration:underline}
+.wt-g-crumbs b{color:var(--wt-text);font-size:14px;word-break:break-word}
+.wt-g-crumbs>span:not(.wt-g-chip){color:var(--wt-text3)}
+.wt-g-meta{font-size:11px;color:var(--wt-text3)}
+.wt-g-chip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;padding:2px 6px;border-radius:5px;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.wt-g-chip.sm{font-size:8px;padding:1px 4px}
+.wt-g-modes{display:flex;border:1px solid var(--wt-border);border-radius:8px;overflow:hidden}
+.wt-g-modes button{background:transparent;border:0;color:var(--wt-text2);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer}
+.wt-g-modes button.on{background:var(--wt-accent);color:#fff}
+.wt-g-legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:2px 16px 8px;font-size:10px;color:var(--wt-text3)}
+.wt-g-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.wt-g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:4px 16px 24px;align-items:start}
+.wt-g-zone{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--wt-text2);padding-top:6px;border-bottom:1px solid var(--wt-border)}
+.wt-g-card{background:var(--wt-bg2);border:1.5px solid var(--wt-cb);border-top:3px solid var(--c);border-radius:12px;padding:10px;min-width:0}
+.wt-g-card-hd{display:flex;align-items:center;gap:6px;cursor:pointer}
+.wt-g-card-hd:hover .wt-g-name{color:var(--wt-accent)}
+.wt-g-name{flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--wt-text);word-break:break-word}
+.wt-g-go{color:var(--wt-text3);font-weight:800}
+.wt-g-stats{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:10px;color:var(--wt-text3);margin:6px 0 5px}
+.wt-g-bar{height:3px;background:var(--wt-cb);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.wt-g-bar i{display:block;height:100%;border-radius:2px}
+.wt-g-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:5px}
+.wt-g-tile{display:flex;flex-direction:column;gap:2px;padding:5px 6px;border-radius:7px;cursor:pointer;background:var(--wt-card);border:1px solid var(--wt-cb);border-left:3px solid var(--c);min-width:0}
+.wt-g-tile:hover{border-color:var(--wt-accent)}
+.wt-g-more{border-style:dashed;border-left-width:1px;justify-content:center;text-align:center}
+.wt-g-loadmore{border:0;text-align:center;font-weight:600;color:var(--wt-text3);padding:12px 0}
+.wt-g-tile-name{font-size:10px;font-weight:700;color:var(--wt-text);word-break:break-word;line-height:1.2}
+.wt-g-tile-meta{font-size:9px;color:var(--wt-text3)}
+.wt-g-card.f-low,.wt-g-tile.f-low{background:rgba(74,222,128,.12)}
+.wt-g-card.f-mid,.wt-g-tile.f-mid{background:rgba(250,204,21,.12)}
+.wt-g-card.f-high,.wt-g-tile.f-high{background:rgba(251,146,60,.14)}
+.wt-g-card.f-full,.wt-g-tile.f-full{background:rgba(248,113,113,.14)}
+.wt-g-card.f-over,.wt-g-tile.f-over{background:rgba(185,28,28,.22)}
+.wt-g-card.f-nocap,.wt-g-tile.f-nocap{background:rgba(100,116,139,.14)}
+.wt-g-card{transition:box-shadow .12s,opacity .12s}
+.wt-g-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.wt-g-card.quiet{opacity:.6}
+.wt-g-card.quiet:hover,.wt-g-card.quiet:focus-within{opacity:1}
+.wt-g-card.dim,.wt-g-tile.dim{opacity:.25}
+.wt-g-card-hd:focus-visible,.wt-g-tile:focus-visible{outline:2px solid var(--wt-accent);outline-offset:2px;border-radius:6px}
+.wt-g-zone span{color:var(--wt-text3);font-weight:700;margin-left:4px}
+.wt-g-kpis{display:flex;flex-wrap:wrap;gap:6px;padding:2px 16px 8px}
+.wt-g-kpi{display:flex;flex-direction:column;align-items:center;min-width:58px;padding:4px 10px;border-radius:8px;background:var(--wt-bg2);border:1px solid var(--wt-border)}
+.wt-g-kpi b{font-size:15px;line-height:1.2;color:var(--wt-text)}
+.wt-g-kpi span{font-size:9px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--wt-text3);white-space:nowrap}
+.wt-g-lg-t{font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--wt-text2)}
+.wt-g-lg-t:not(:first-child){margin-left:8px}
+.wt-g-legend i.ring{background:transparent;border:2px solid var(--c)}
+.wt-g-legend i.e{background:transparent;border:1px solid var(--wt-text3)}
+.wt-g-wrap{display:flex;flex-direction:column;height:100%}
+.wt-g-head,.wt-g-kpis,.wt-g-legend,.wt-g-grid{flex:none}
+.wt-g-plan{position:relative;flex:1;min-height:300px;overflow:hidden}
+.wt-g-plan svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none}
+.wt-g-plan svg:active{cursor:grabbing}
+.wt-p-grid{stroke:var(--wt-border)}
+.wt-p-grid2{stroke:var(--wt-text3);opacity:.35}
+.wt-p-site{fill:none}
+.wt-p-box{cursor:pointer;stroke-width:1.3;transition:stroke-width .1s}
+.wt-p-box:hover{stroke-width:2.6}
+.wt-p-box.sel{stroke-width:3;stroke:var(--wt-accent)}
+.wt-p-bay{cursor:pointer;stroke-width:1;fill-opacity:.6}
+.wt-p-bay.empty{fill:var(--wt-bg);stroke:var(--wt-text3)}
+.wt-p-bay.lvbg{fill:var(--wt-bg)}
+.wt-p-bay:hover{stroke-width:2.6}
+.wt-p-name,.wt-p-type,.wt-p-bayname{paint-order:stroke;stroke:var(--wt-bg);stroke-width:.22em;stroke-linejoin:round}
+.wt-p-name{fill:var(--wt-text);font-weight:800;pointer-events:none}
+.wt-p-type{font-weight:800;text-transform:uppercase;pointer-events:none}
+.wt-p-bayname{fill:var(--wt-text);font-weight:700;pointer-events:none}
+.wt-p-lv{cursor:pointer;stroke:var(--wt-text3);stroke-width:.6;fill-opacity:.75}
+.wt-p-lv.empty{fill:var(--wt-card)}
+.wt-p-lv.thin{stroke:none}
+.wt-p-lv:hover{stroke:var(--wt-accent);stroke-width:2}
+.wt-p-lvname{fill:var(--wt-text);font-weight:800;pointer-events:none;paint-order:stroke;stroke:var(--wt-bg);stroke-width:.2em;stroke-linejoin:round}
+.wt-g-zoom{position:absolute;right:14px;top:10px;display:flex;flex-direction:column;border:1px solid var(--wt-border);border-radius:9px;overflow:hidden;background:var(--wt-bg2);box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.wt-g-zoom button{width:34px;height:32px;border:0;background:transparent;color:var(--wt-text);cursor:pointer;font-size:17px;font-weight:700}
+.wt-g-zoom button+button{border-top:1px solid var(--wt-border)}
+.wt-g-zoom button:hover{background:var(--wt-pill)}
+.wt-g-sel{position:absolute;left:14px;right:62px;top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border-radius:10px;background:var(--wt-bg2);border:1px solid var(--wt-border);box-shadow:0 4px 14px rgba(0,0,0,.2);font-size:12px;color:var(--wt-text2);max-width:640px}
+.wt-g-sel b{color:var(--wt-text);word-break:break-word}
+.wt-g-sel button{margin-left:auto;background:var(--wt-accent);color:#fff;border:0;border-radius:7px;padding:4px 12px;font-weight:700;cursor:pointer}
+.wt-g-tip{position:absolute;z-index:3;width:236px;pointer-events:none;padding:9px 11px;border-radius:10px;background:var(--wt-bg2);border:1px solid var(--wt-border);box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:11px;color:var(--wt-text2);display:flex;flex-direction:column;gap:4px}
+.wt-g-tip-hd{display:flex;align-items:center;gap:6px}
+.wt-g-tip-hd b{color:var(--wt-text);font-size:12px;word-break:break-word}
+.wt-g-tip .wt-g-bar{margin:2px 0 0}
+.wt-g-tip-ft{font-size:9px;color:var(--wt-text3)}
+.wt-g-scale{position:absolute;left:14px;bottom:10px;display:flex;align-items:center;gap:6px;font-size:10px;font-weight:700;color:var(--wt-text2);pointer-events:none}
+.wt-g-scale i{display:block;height:6px;border:2px solid var(--wt-text2);border-top:0}
+.wt-g-hint{position:absolute;right:14px;bottom:10px;font-size:10px;color:var(--wt-text3);pointer-events:none}
+@media (max-width:600px){#wt-view2d{left:0}.wt-g-grid{grid-template-columns:1fr;padding:4px 10px 20px}.wt-g-head{padding:10px 10px 4px}.wt-g-legend{padding:2px 10px 6px}.wt-g-kpis{padding:2px 10px 6px}.wt-g-kpi{min-width:0;padding:3px 8px}.wt-g-hint{display:none}}
 .wt-2d-levels{width:100%;margin-top:5px;display:flex;flex-direction:column;gap:3px}
 .wt-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;background:rgba(100,116,139,.2);color:#94a3b8;white-space:nowrap}.wt-badge.red{background:rgba(248,113,113,.18);color:#f87171}.wt-badge.orange{background:rgba(251,146,60,.18);color:#fb923c}.wt-badge.blue{background:rgba(96,165,250,.18);color:#60a5fa}.wt-badge.green{background:rgba(74,222,128,.18);color:#4ade80}
 .wt-2d-lv-row{display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:4px;background:rgba(255,255,255,.05);cursor:pointer;transition:background .12s}
@@ -662,7 +723,7 @@ const store = reactive({
   threeReady: false,
   sidebarOpen: false,
   // the map: a warehouse and everything under it, drawn in place; Edit layout drags blocks (metres, half-metre steps)
-  mapMode: false, mapRoot: null, mapData: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
+  mapMode: false, mapRoot: null, mapData: null, mapLoading: null, mapEdit: false, mapSel: null, mapDirty: {}, mapHover: null,
   // left pane: the warehouse tree, a level at a time
   treeRoots: [], treeCompanies: 1, treeKids: {}, treeOpen: {}, treeLoading: {}, treeSel: null, treeFilter: '',
   aisleMode: false,
@@ -697,6 +758,7 @@ const store = reactive({
   whDeleting: false,
   whBayTypes: [],
   imAllItems: {},     // level warehouse -> full item list, loaded on demand
+  v2Mode: (()=>{ try { return localStorage.getItem('wt3d_2d_mode')||'cards'; } catch(e) { return 'cards'; } })(),  // 2D: cards or plan
   searchHits: [],     // serial / batch / item hits across floors (server)
   searchOpen: false,
   toast: null,
@@ -1043,42 +1105,7 @@ class ThreeEngine {
     this.meshMap={}; this.blockMap={}; store.selKey=null;
     const bgCol=store.isDark?0x0c0e14:0xf0f2f5;
     this.scene.background.setHex(bgCol); this.scene.fog.color.setHex(bgCol); this.renderer.setClearColor(bgCol,1);
-    const nodes=Object.fromEntries(data.nodes.map(n=>[n.id, n]));
-    const kids={};
-    data.nodes.forEach(n=>{ if (n.id!==data.root && nodes[n.parent]) (kids[n.parent]=kids[n.parent]||[]).push(n); });
-    const PAD=2, GAP=3, LEAF=[8,5];
-    const measure=(n)=>{
-      const L=parseFloat(n.length)||0, B=parseFloat(n.breadth)||0;
-      if (n.type==='Floor') {
-        const slots=data.slots[n.id]||[];
-        n._slots=slots; n._layout=this.slotPlaces(slots);
-        const cw=n._layout.w+1, cd=n._layout.d+1;  // half a metre round the racks
-        n._scale=(L&&B)?Math.min(L/cw, B/cd):1;
-        return [L||cw, B||cd];
-      }
-      const ks=kids[n.id]||[];
-      if (!ks.length) return [L||LEAF[0], B||LEAF[1]];
-      ks.forEach(k=>{ const [w,d]=measure(k); [k._w,k._d]=String(k.rotation)==='90'?[d,w]:[w,d]; });
-      let maxX=0, maxY=0;
-      ks.filter(k=>k.x!=null||k.y!=null).forEach(k=>{
-        k._x=parseFloat(k.x)||0; k._y=parseFloat(k.y)||0; maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
-      });
-      const free=ks.filter(k=>k.x==null&&k.y==null);
-      if (free.length) {  // packed in rows below what is placed
-        const area=free.reduce((a,k)=>a+k._w*k._d,0);
-        const rowW=Math.max(L, maxX, Math.sqrt(area)*1.5, ...free.map(k=>k._w+2*PAD));
-        let x=PAD, y=maxY?maxY+GAP:PAD, rowH=0;
-        free.forEach(k=>{
-          if (x>PAD && x+k._w>rowW) { x=PAD; y+=rowH+GAP; rowH=0; }
-          k._x=x; k._y=y; x+=k._w+GAP; rowH=Math.max(rowH,k._d);
-          maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
-        });
-      }
-      return [L||maxX+PAD, B||maxY+PAD];
-    };
-    const root=nodes[data.root];
-    const [W,D]=measure(root);
-    root._w=W; root._d=D;
+    const {nodes, kids, root}=mapLayout(data), W=root._w, D=root._d;
     const TONE=store.isDark?[0x1d2a44,0x22324f,0x1a2438,0x253555]:[0xdfe7f3,0xd3deee,0xe8eef7,0xcbd7ea];
     const draw=(n, frame, depth)=>{
       const grp=new THREE.Group(); grp.position.set(n._x||0, 0, n._y||0); frame.add(grp);
@@ -1305,6 +1332,50 @@ class ThreeEngine {
 }
 
 const engine = new ThreeEngine();
+let mapSeq = 0;  // the map being loaded: a page that lands after another map (or a Floor) was opened is dropped
+// Where each warehouse of a map goes, in metres from its parent's corner (_x, _y), and its size (_w, _d): placed ones
+// where they were put, the rest packed in rows below; a Floor fits its slots (_layout, _scale). The 3D map and the
+// 2D plan both draw from it. It writes onto data's nodes: pass the 2D view a copy that is not reactive.
+function mapLayout(data) {
+  const nodes=Object.fromEntries(data.nodes.map(n=>[n.id, n]));
+  const kids={};
+  data.nodes.forEach(n=>{ if (n.id!==data.root && nodes[n.parent]) (kids[n.parent]=kids[n.parent]||[]).push(n); });
+  const PAD=2, GAP=3, LEAF=[8,5];
+  const measure=(n)=>{
+    const L=parseFloat(n.length)||0, B=parseFloat(n.breadth)||0;
+    if (n.type==='Floor') {
+      const slots=data.slots[n.id]||[];
+      n._slots=slots; n._layout=engine.slotPlaces(slots);
+      const cw=n._layout.w+1, cd=n._layout.d+1;  // half a metre round the racks
+      n._scale=(L&&B)?Math.min(L/cw, B/cd):1;
+      return [L||cw, B||cd];
+    }
+    const ks=kids[n.id]||[];
+    if (!ks.length) return [L||LEAF[0], B||LEAF[1]];
+    ks.forEach(k=>{ const [w,d]=measure(k); [k._w,k._d]=String(k.rotation)==='90'?[d,w]:[w,d]; });
+    let maxX=0, maxY=0;
+    ks.filter(k=>k.x!=null||k.y!=null).forEach(k=>{
+      k._x=parseFloat(k.x)||0; k._y=parseFloat(k.y)||0; maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
+    });
+    const free=ks.filter(k=>k.x==null&&k.y==null);
+    if (free.length) {  // packed in rows below what is placed
+      const area=free.reduce((a,k)=>a+k._w*k._d,0);
+      const rowW=Math.max(L, maxX, Math.sqrt(area)*1.5, ...free.map(k=>k._w+2*PAD));
+      let x=PAD, y=maxY?maxY+GAP:PAD, rowH=0;
+      free.forEach(k=>{
+        if (x>PAD && x+k._w>rowW) { x=PAD; y+=rowH+GAP; rowH=0; }
+        k._x=x; k._y=y; x+=k._w+GAP; rowH=Math.max(rowH,k._d);
+        maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
+      });
+    }
+    return [L||maxX+PAD, B||maxY+PAD];
+  };
+  const root=nodes[data.root];
+  const [W,D]=measure(root);
+  root._w=W; root._d=D;
+  return {nodes, kids, root};
+}
+
 // the open view drawn again: the map of a warehouse, or one Floor's racks (search-filtered)
 function redraw(keepCamera=false) {
   if (store.mapMode && store.mapData) engine.buildMap(store.mapData, keepCamera);
@@ -1576,16 +1647,32 @@ const actions = {
     if (Object.keys(store.mapDirty).length && !confirm('Leave the layout without saving it?')) return;
     store.mapMode=true; store.mapRoot=n.id; store.mapEdit=false; store.mapSel=null; store.mapDirty={};
     store.curGrp=null; store.treeSel=n.id; store.dpOpen=false; store.sidebarOpen=false;
-    store.loading=true;
+    store.loading=true; store.mapLoading=null;
+    const seq=++mapSeq;
+    let next=null;
     try {
       const data = await call('get_map',{warehouse:n.id});
+      if (seq!==mapSeq) return;
       store.mapData=data;
       store.slots=Object.values(data.slots||{}).flat();  // the counts at the top cover the whole map
-      if (data.too_many) notify(`Only the first ${Object.keys(data.slots).length} ${l('Floor', true)} are drawn in full`, 'orange');
-      if (store.curView!=='3d') actions.setView('3d'); else redraw();
-      engine.springIn();
+      if (store.curView==='3d') { redraw(); engine.springIn(); }  // 2D draws itself from mapData
+      next=data.next;
     } catch(e){ console.error('WT: map', e); notify('Could not load the map: '+(e.message||e), 'red'); }
-    finally { store.loading=false; }
+    finally { if (seq===mapSeq) store.loading=false; }
+    // a big site: the rest of the racks come a page at a time, and the map fills in as each one lands
+    const live=()=>seq===mapSeq && store.mapMode && store.mapRoot===n.id;
+    while (next!=null && live()) {
+      store.mapLoading={done:Object.keys(store.mapData.slots).length, total:store.mapData.floors};
+      try {
+        const pg = await call('get_map',{warehouse:n.id, start:next});
+        if (!live()) break;
+        store.mapData={...store.mapData, slots:{...store.mapData.slots, ...pg.slots}};
+        store.slots=Object.values(store.mapData.slots).flat();
+        if (store.curView==='3d' && !store.mapEdit) { const sel=store.mapSel; redraw(true); if (sel) actions.mapSelect(sel); }
+        next=pg.next;
+      } catch(e){ console.error('WT: map page', e); notify('Could not load the rest of the map: '+(e.message||e), 'red'); break; }
+    }
+    if (seq===mapSeq) store.mapLoading=null;
   },
 
   async drillMap(node) {
@@ -2012,7 +2099,7 @@ const actions = {
   },
 
   setView(v) {
-    if (v==='2d' && store.mapMode) { notify(`The 2D view shows one ${l('Floor')}: pick one in the tree`, 'orange'); return; }
+    if (v==='2d' && store.mapEdit) { notify('Save or cancel the layout first', 'orange'); return; }
     store.curView=v;
     const cw3d=document.getElementById('wt-cw');
     const v2d=document.getElementById('wt-view2d');
@@ -2020,7 +2107,7 @@ const actions = {
     if(cw3d) cw3d.style.display=v==='3d'?'block':'none';
     if(v2d){
       v2d.style.display=v==='2d'?'block':'none';
-      if(isMobile) v2d.style.top='80px';
+      v2d.style.top=isMobile ? ((document.getElementById('wt-top')||{}).offsetHeight||80)+'px' : '';  // below the top bar, however tall it wraps
     }
     if (v==='3d' && (store.slots.length || store.mapMode)) redraw();
     engine._startAnimate();
@@ -2312,7 +2399,7 @@ const Sidebar = defineComponent({
       <div id="wt-sb-overlay" :class="store.sidebarOpen?'show':''" @click="actions.toggleSidebar()"></div>
       <div id="wt-sb" :class="store.sidebarOpen?'mobile-open':''">
         <div id="wt-sb-grip" :class="grip?'on':''" @mousedown="startResize" @touchstart="startResize" title="Drag to resize"></div>
-        <div class="wt-sb-brand">Warehouse 3D</div>
+        <div class="wt-sb-brand">Warehouse Map</div>
         <div class="wt-t-filter"><input v-model="store.treeFilter" placeholder="Filter warehouses"></div>
         <div id="wt-sb-list">
           <TreeNode v-for="r in store.treeRoots" :key="r.id" :node="r" :depth="0"/>
@@ -2400,7 +2487,7 @@ const TopBar = defineComponent({
           <button :class="['wt-sw-btn', store.curView==='2d'?'act':'']" @click="actions.setView('2d')">⊞ 2D</button>
         </div>
         <button class="wt-theme-btn" @click="actions.toggleTheme()">{{store.isDark?'🌙':'☀️'}}</button>
-        <button v-if="store.mapMode && store.canEdit && !store.mapEdit" class="wt-sw-btn wt-map-edit-btn"
+        <button v-if="store.mapMode && store.canEdit && !store.mapEdit && store.curView==='3d'" class="wt-sw-btn wt-map-edit-btn"
           @click="store.mapEdit=true; store.mapHover=null" title="Drag areas and bays to where they stand">✎ Edit layout</button>
         <button v-if="store.curView==='3d' && !store.aisleMode && !store.mapMode"
           class="wt-sw-btn" style="background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.4);border-radius:6px;height:26px;padding:0 10px"
@@ -2431,6 +2518,7 @@ const TopBar = defineComponent({
         <div class="wt-pill occ"><div class="wt-pv">{{hud.occ}}</div><div class="wt-pl">Active</div></div>
         <div class="wt-pill free"><div class="wt-pv">{{hud.free}}</div><div class="wt-pl">Empty</div></div>
         <div class="wt-pill qty" :title="hud.qtyTitle"><div class="wt-pv">{{hud.qty}}</div><div class="wt-pl">Stock</div></div>
+        <div v-if="store.mapLoading" class="wt-pill load" :title="'Loading the racks a page at a time'"><div class="wt-pv">{{store.mapLoading.done}}/{{store.mapLoading.total}}</div><div class="wt-pl">{{L('Floor', 1)}}…</div></div>
       </div>
     </div>
   `,
@@ -3103,85 +3191,386 @@ const FloorPlanModal = defineComponent({
 /* ─────────────────────────────────────────────────────────────
    COMPONENT: View2D
 ───────────────────────────────────────────────────────────── */
+// The type of a warehouse in a word (WMS Settings > Location Labels), and its colour on cards, chips and the plan
+const TYPE_CLR = {Building:'#3b82f6', Floor:'#8b5cf6', Zone:'#14b8a6', Slot:'#f59e0b', Level:'#64748b', Tote:'#ec4899'};
+function typeClr(t) { return TYPE_CLR[t] || '#94a3b8'; }
+function typeName(t, ws, isGroup) { return t ? L(t, false, ws) : (isGroup===0 ? 'Warehouse' : 'Group'); }
+function escHtml(v) { return String(v==null?'':v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const byName = (a,b)=>String(a).localeCompare(String(b), undefined, {numeric:true});
+// How full a warehouse or bay is, in a word ('' when it holds no bays): the same bands as the 3D colours
+const TONE_CLR = {low:'#22c55e', mid:'#eab308', high:'#f97316', full:'#ef4444', over:'#b91c1c', nocap:'#64748b'};
+const TONE_NAME = {low:'Low', mid:'Mid', high:'High', full:'Full', over:'Over', nocap:'No capacity'};
+function toneOf(st) {
+  const p=st.fill;
+  return !st.bays?'':!st.used?'empty':p==null?'nocap':p>100?'over':p>=90?'full':p>=70?'high':p>=40?'mid':'low';
+}
+// a level's own part of its name: "RKY-01-P01-B2-L0" in bay "RKY-01-P01-B2" is "L0"
+function lvShort(lv, sl) {
+  const t=String(lv.label||lv.wh).split('/').pop(), b=sl.label||shortWh(sl.wh);
+  return t.startsWith(b) && t.length>b.length ? t.slice(b.length).replace(/^[-_ /]+/, '') || t : t;
+}
+const TYPE_ORDER = ['Building','Floor','Zone','Slot','Level','Tote'];
+const typePlural = (t, ws, isGroup)=> t ? L(t, true, ws) : typeName(t, ws, isGroup)+'s';
+
 const View2D = defineComponent({
   name: 'View2D',
   setup(){
-    const sections = computed(()=>{
-      const slots=filteredSlots();
-      const secMap={}, secOrder=[];
-      slots.forEach(sl=>{
-        const nm=(sl.label||sl.wh).replace(/\s*-\s*[A-Z]{1,8}$/,'').split('/').pop().trim();
-        // Zones group the tiles when the floor has them; otherwise fall back to the name prefix (A12 -> A)
-        const key=(sl.zone_path||[]).length ? sl.zone_path.join(' › ') : (nm.match(/^([A-Za-z]+)/)?.[1]||nm.substring(0,2));
-        if(!secMap[key]){secMap[key]=[];secOrder.push(key);}
-        secMap[key].push({...sl,shortName:nm});
-      });
-      secOrder.sort((a,b)=>a.localeCompare(b));
-      secOrder.forEach(key=>{if(secMap[key])secMap[key].sort((a,b)=>a.shortName.localeCompare(b.shortName));});
-      return secOrder.map(key=>{
-        const tiles=secMap[key];
-        const cols=tiles.length<=1?1:tiles.length<=4?2:3;
-        const occ=tiles.filter(s=>hasStock(s)).length;
-        const pct=tiles.length?Math.round((occ/tiles.length)*100):0;
-        const cntCls=pct>=80?'red':pct>=50?'org':'grn';
-        const known=tiles.map(slotFill).filter(p=>p!=null);
-        const avgFp=known.length?Math.round(known.reduce((a,b)=>a+b,0)/known.length):0;
-        const barClr=avgFp>0?FCH(avgFp):'var(--wt-border)';
-        return {key,tiles,cols,occ,cntCls,avgFp,barClr};
-      });
+    // What 2D draws: the open map, else the selected Floor, in the shape get_map returns. A copy: mapLayout writes on it.
+    const src = computed(()=>{
+      if (store.mapMode && store.mapData) return structuredClone(Vue.toRaw(store.mapData));
+      const g = store.curGrp;
+      if (!g) return null;
+      return {root:g.id, nodes:[{id:g.id, label:g.name||shortWh(g.id), type:'Floor', is_group:1, render_mode:g.render_mode, ws:g.ws}],
+        slots:{[g.id]: structuredClone(Vue.toRaw(store.slots))}};
     });
+    const lay = computed(()=> src.value && src.value.nodes.length ? {...mapLayout(src.value), src:src.value} : null);
+    const hits = computed(()=> store.searchQuery ? new Set(filteredSlots().map(s=>s.wh)) : null);
 
-    function tileCls(sl){
-      const fp=slotFill(sl), hs=hasStock(sl);
-      return !hs?'empty':fp==null?'nocap':fp>100?'over':fp>=90?'full':fp>=70?'high':fp>=40?'mid':'low';
+    const slotsUnder = (n)=> n.type==='Floor' ? (lay.value.src.slots[n.id]||[]) : (lay.value.kids[n.id]||[]).flatMap(slotsUnder);
+    function stats(slots){
+      const known = slots.map(slotFill).filter(p=>p!=null);
+      return {bays:slots.length, used:slots.filter(hasStock).length,
+        fill: known.length ? Math.round(known.reduce((a,b)=>a+b,0)/known.length) : null,
+        hit: !hits.value || slots.some(s=>hits.value.has(s.wh))};
     }
-    function tileQty(sl){ return fmtUoms(qtyByUom(sl.levels), 1); }
+    const nodeItem = (n)=>{ const st=stats(slotsUnder(n));
+      return {kind:'node', id:n.id, label:n.label||shortWh(n.id), type:n.type, isGroup:n.is_group, ws:n.ws, node:n, st, tone:toneOf(st)}; };
+    const bayItem = (sl)=>{ const st=stats([sl]);
+      return {kind:'bay', id:sl.wh, label:sl.label||shortWh(sl.wh), type:'Slot', ws:sl.ws, slot:sl,
+        group:(sl.zone_path||[]).join(' › '), st, tone:toneOf(st)}; };
+    function childrenOf(it){
+      if (it.kind==='bay') return [];
+      if (it.type==='Floor') return [...(lay.value.src.slots[it.id]||[])]
+        .sort((a,b)=>byName(zoneLabel(a)+'\u0000'+(a.label||a.wh), zoneLabel(b)+'\u0000'+(b.label||b.wh))).map(bayItem);
+      return [...(lay.value.kids[it.id]||[])].sort((a,b)=>byName(a.label||a.id, b.label||b.id)).map(nodeItem);
+    }
+    // two levels at a time: the open warehouse's children as cards, and theirs inside each card
+    const view = computed(()=>{
+      if (!lay.value) return null;
+      const root = nodeItem(lay.value.root);
+      const cards = childrenOf(root).map(c=>({...c, kids: childrenOf(c)}));
+      if (root.type!=='Floor') {  // bays keep their order on the floor; anything else: by type, the busiest first
+        const rank=(c)=>{ const i=TYPE_ORDER.indexOf(c.type); return i<0 ? TYPE_ORDER.length+(c.isGroup===0?1:0) : i; };
+        cards.sort((a,b)=> rank(a)-rank(b) || b.st.used-a.st.used || (b.st.fill||0)-(a.st.fill||0) || b.st.bays-a.st.bays || byName(a.label,b.label));
+        cards.forEach(c=>{ c.group=typePlural(c.type, c.ws, c.isGroup); });
+      }
+      const counts={};
+      cards.forEach(c=>{ if (c.group) counts[c.group]=(counts[c.group]||0)+1; });
+      return {root, cards, counts, kpis:kpisOf(root)};
+    });
+    // the summary strip: what is inside the open warehouse, every level down, and how its bays are used
+    function kpisOf(root){
+      const per={}, walk=(n)=>(lay.value.kids[n.id]||[]).forEach(k=>{
+        const t=typePlural(k.type, k.ws, k.is_group);
+        per[t]=per[t]||{v:0, one:typeName(k.type, k.ws, k.is_group)}; per[t].v++; walk(k);
+      });
+      walk(root.node);
+      const out=Object.entries(per).map(([many, p])=>({label:p.v===1?p.one:many, v:p.v})), st=root.st;
+      if (st.bays) out.push({label:L('Slot', true, root.ws), v:st.bays},
+        {label:'In use', v:st.used, clr:st.used?TONE_CLR.low:null}, {label:'Empty', v:st.bays-st.used});
+      if (st.fill!=null) out.push({label:'Avg fill', v:st.fill+'%', clr:FCH(st.fill)});
+      return out;
+    }
+
+    // infinite scroll: cards are drawn a page at a time, the next page once the end of the list scrolls into sight
+    // a search glides the plan to the first bay it finds
+    watch(hits, (h)=>{
+      if (!h || !h.size || store.v2Mode!=='plan') return;
+      nextTick(()=>{ const el=svgEl.value && [...svgEl.value.querySelectorAll('rect.wt-p-bay')].find(r=>h.has(r.getAttribute('data-bay'))); if (el) zoomTo(el); });
+    });
+    const PAGE=40, TILES=24, shown=ref(PAGE), more=ref(null);
+    watch(()=>view.value && view.value.root.id, ()=>{ shown.value=PAGE; });
+    const io=new IntersectionObserver(es=>{ if (es.some(e=>e.isIntersecting) && view.value && shown.value<view.value.cards.length) shown.value+=PAGE; }, {rootMargin:'400px'});
+    watch(more, (el, old)=>{ if (old) io.unobserve(old); if (el) io.observe(el); });
+
+    // the breadcrumb: the open warehouse's parents, each one a click away
+    const path = ref([]);
+    watch(()=>view.value && view.value.root.id, async (id)=>{
+      path.value = [];
+      if (!id) return;
+      try { path.value = (await call('get_path', {warehouse:id})) || []; } catch(e) { path.value = []; }
+    }, {immediate:true});
+
+    function open(it){
+      if (it.kind==='bay') return actions.open2DModal(it.id);
+      actions.drillMap({id:it.id, label:it.label, type:it.type, render_mode:it.node.render_mode, ws:it.ws});
+    }
+    function up(id){ actions.drillMap({id, label:shortWh(id)}); }
+    function setMode(m){ store.v2Mode=m; try { localStorage.setItem('wt3d_2d_mode', m); } catch(e) { /* private window */ } }
+    function fillClr(st){ return st.fill==null ? 'var(--wt-border)' : FCH(st.fill); }
     function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
     function lvQty(lv){ return fmtUoms(qtyByUom([lv]), 1); }
 
-    return { store, sections, tileCls, tileQty, lvColor, lvQty, lvTag, actions, fmtK, fmt, FCH, slotFill, hasStock, lvHasStock, zoneLabel, fmtUoms, qtyByUom };
+    // ── the plan: the same layout as the 3D map, flat and to scale (SVG, metres) ──
+    const svgEl = ref(null), vb = reactive({x:0, y:0, w:100, h:60}), sel = ref(null);
+    // screen pixels per metre, measured once a pan or zoom settles: a label too small to read is left out until you zoom in
+    const ppm = ref(0); let ppmT=0;
+    function measure(){ const r=svgEl.value && svgEl.value.getBoundingClientRect(); if (r && r.width) ppm.value=Math.min(r.width/vb.w, r.height/vb.h); }
+    const remeasure=()=>{ clearTimeout(ppmT); ppmT=setTimeout(measure, 120); };
+    watch(()=>[vb.w, vb.h, store.v2Mode, store.curView], remeasure);
+    window.addEventListener('resize', remeasure);
+    const readable=(size, px)=> !ppm.value || size*ppm.value>=px;
+    function fit(smooth){
+      if (!lay.value) return;
+      const r=lay.value.root, m=Math.max(r._w, r._d)*.04, t={x:-m, y:-m, w:r._w+2*m, h:r._d+2*m};
+      if (smooth) glide(t); else Object.assign(vb, t);
+    }
+    watch(()=>lay.value && lay.value.root.id, ()=>{ sel.value=null; fit(); }, {immediate:true});
+    // the grid and scale bar: a round step (0.5 m … 100 m) about 28 px apart at the current zoom
+    const gridStep = computed(()=>{
+      const k = ppm.value || (lay.value ? 980/Math.max(lay.value.root._w, 1) : 10);
+      return [.5,1,2,5,10,20,50,100,200].find(v=>v*k>=28) || 200;
+    });
+    const scaleBar = computed(()=>{
+      if (!ppm.value) return null;
+      const m=[1,2,5,10,20,50,100,200,500].find(v=>v*ppm.value>=70) || 500;
+      return {px:Math.round(m*ppm.value), label:m+' m'};
+    });
+    const FLOOR_LABEL = 1.1;  // metres: the most a Floor's name takes above it
+    const slotByWh = computed(()=> lay.value ? Object.fromEntries(Object.values(lay.value.src.slots).flat().map(sl=>[sl.wh, sl])) : {});
+    const planSvg = computed(()=>{
+      if (!lay.value) return '';
+      const out=[], kids=lay.value.kids, R=lay.value.root, px=1/(ppm.value||10);  // px: one screen pixel in metres
+      const g=gridStep.value, G=g*5, ext=Math.max(R._w, R._d);
+      out.push(`<defs><pattern id="wt-pg" width="${g}" height="${g}" patternUnits="userSpaceOnUse"><path d="M${g} 0H0V${g}" fill="none" class="wt-p-grid" stroke-width="${px}"/></pattern>`
+        +`<pattern id="wt-pG" width="${G}" height="${G}" patternUnits="userSpaceOnUse"><rect width="${G}" height="${G}" fill="url(#wt-pg)"/><path d="M${G} 0H0V${G}" fill="none" class="wt-p-grid2" stroke-width="${px}"/></pattern></defs>`);
+      out.push(`<rect x="${-ext*2}" y="${-ext*2}" width="${ext*5}" height="${ext*5}" fill="url(#wt-pG)"/>`);
+      const draw=(n, depth)=>{
+        const st=stats(slotsUnder(n)), c=typeClr(n.type), name=n.label||shortWh(n.id), tn=typeName(n.type,n.ws,n.is_group);
+        const ks=kids[n.id]||[], tone=TONE_CLR[toneOf(st)], rx=Math.min(n._w, n._d, 6*px*4)*.08+2*px;
+        out.push(`<g transform="translate(${n._x||0},${n._y||0})"${st.hit?'':' opacity=".25"'}>`);
+        if (!depth) {  // the open warehouse: its boundary on the grid
+          out.push(`<rect class="wt-p-site" width="${n._w}" height="${n._d}" rx="${rx}" stroke="${c}" stroke-dasharray="${6*px} ${4*px}" stroke-width="${1.5*px}"/>`);
+        } else {  // a block: solid, tinted by how full it is, a strip of its type's colour along the top
+          const base = depth%2 ? 'var(--wt-bg2)' : 'var(--wt-bg3)';
+          const fill = tone ? `color-mix(in srgb,${tone} ${ks.length||n.type!=='Floor'?14:30}%,${base})` : base;
+          out.push(`<rect class="wt-p-box${sel.value===n.id?' sel':''}" data-id="${escHtml(n.id)}" width="${n._w}" height="${n._d}" rx="${rx}" style="fill:${fill}" stroke="${c}" vector-effect="non-scaling-stroke"/>`);
+          out.push(`<rect width="${n._w}" height="${Math.min(4*px, n._d*.25)}" rx="${rx}" fill="${c}" pointer-events="none"/>`);
+          // a Floor's name sits just above it (its racks fill it); anything else's in the room above what it holds,
+          // less the band its Floors' names take
+          const above = n.type==='Floor';
+          const band = ks.some(k=>k.type==='Floor') ? FLOOR_LABEL*1.25 : 0;
+          const room = above ? FLOOR_LABEL/.75 : ks.length && String(n.rotation)!=='90' ? Math.min(...ks.map(k=>k._y))-band : n._d*.3;
+          const size=(txt, extra)=>Math.min(depth<=1?3:1.6, room*.75, n._w*.92/(.56*(txt.length+extra)));
+          const code=name.split(' ')[0];
+          const pick=[[name, tn], [name, ''], [code, '']].map(([t, ty])=>({t, ty, fs:size(t, ty?ty.length*.75+2:0)})).find(o=>o.fs>0 && readable(o.fs, 8));
+          if (pick) out.push(`<text class="wt-p-name" x="${above?0:pick.fs*.45}" y="${above?-pick.fs*.3:pick.fs*1.1+3*px}" font-size="${pick.fs}">${escHtml(pick.t)}${pick.ty?`<tspan class="wt-p-type" dx="${pick.fs*.5}" font-size="${pick.fs*.68}" fill="${c}">${escHtml(pick.ty)}</tspan>`:''}</text>`);
+        }
+        out.push(String(n.rotation)==='90' ? `<g transform="translate(${n._w},0) rotate(90)">` : '<g>');
+        if (n.type==='Floor') {
+          const s=n._scale||1;
+          out.push(`<g transform="translate(${.5*s},${.5*s}) scale(${s})">`);
+          (n._slots||[]).forEach(sl=>{
+            const p=n._layout.places[sl.wh], clr=TONE_CLR[toneOf(stats([sl]))], dim=hits.value && !hits.value.has(sl.wh);
+            const lvs=sl.levels||[], showLv=lvs.length>0;  // every bay shows its levels; their names wait until readable
+            const bn=sl.label||shortWh(sl.wh), bfs=Math.min(.45, p.d*(showLv?.15:.4), p.w*.94/(.6*Math.max(4,bn.length)));
+            out.push(`<g${dim?' opacity=".2"':''}>`);
+            out.push(`<rect class="wt-p-bay${!clr?' empty':showLv?' lvbg':''}" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15"${clr?` fill="${clr}" stroke="${clr}"`:''} vector-effect="non-scaling-stroke"/>`);
+            if (showLv) {  // ground level at the bottom, as in the rack
+              const top=p.d*.2, ins=Math.min(p.w, p.d)*.06, hh=(p.d-top-ins)/lvs.length, thin=!readable(hh*s, 4);
+              lvs.forEach((lv, i)=>{
+                const y=p.y+p.d-ins-(i+1)*hh, has=lvHasStock(lv), lc=has?FCH(lvFill(lv)):null;
+                out.push(`<rect class="wt-p-lv${has?'':' empty'}${thin?' thin':''}" data-bay="${escHtml(sl.wh)}" data-lv="${escHtml(lv.wh)}" x="${p.x+ins}" y="${y+hh*.06}" width="${p.w-2*ins}" height="${hh*.88}" rx=".08"${lc?` fill="${lc}"`:''} vector-effect="non-scaling-stroke"/>`);
+                const ln=lvShort(lv, sl), w=p.w-4*ins, tag0=has?(lvTag(lv)||lvQty(lv)):'';
+                const fit=(len)=>Math.min(hh*.55, .3, w/(.6*len));
+                const tag=tag0 && fit(ln.length+tag0.length+1)>=fit(ln.length)*.7 ? tag0 : '', lfs=fit(ln.length+(tag?tag.length+1:0));
+                if (readable(lfs*s, 7)) out.push(`<text class="wt-p-lvname" x="${p.x+ins*2}" y="${y+hh*.5+lfs*.35}" font-size="${lfs}">${escHtml(ln)}${tag?`<tspan dx="${lfs*.6}" font-weight="600">${escHtml(tag)}</tspan>`:''}</text>`);
+              });
+            }
+            if (bfs>.1 && readable(bfs*s, 8)) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${showLv?p.y+p.d*.1+bfs*.35:p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
+            out.push('</g>');
+          });
+          out.push('</g>');
+        } else ks.forEach(k=>draw(k, depth+1));
+        out.push('</g></g>');
+      };
+      draw(R, 0);
+      return out.join('');
+    });
+    const selItem = computed(()=>{
+      if (!sel.value || !lay.value || !lay.value.nodes[sel.value]) return null;
+      return nodeItem(lay.value.nodes[sel.value]);
+    });
+    // a glide to a view box: fit, the zoom buttons and a click on a block
+    let anim=0;
+    function glide(t){
+      cancelAnimationFrame(anim);
+      const s={x:vb.x, y:vb.y, w:vb.w, h:vb.h}, t0=performance.now();
+      const step=(now)=>{ const k=Math.min(1, (now-t0)/280), e=1-Math.pow(1-k, 3);
+        for (const key of ['x','y','w','h']) vb[key]=s[key]+(t[key]-s[key])*e;
+        if (k<1) anim=requestAnimationFrame(step); };
+      anim=requestAnimationFrame(step);
+    }
+    function zoomTo(el){  // the block on screen, back into metres (rotation included), with a margin
+      const m=svgEl.value.getScreenCTM().inverse(), r=el.getBoundingClientRect();
+      const a=new DOMPoint(r.left, r.top).matrixTransform(m), b=new DOMPoint(r.right, r.bottom).matrixTransform(m);
+      const w=b.x-a.x, h=b.y-a.y, pad=Math.max(w, h)*.15;
+      glide({x:a.x-pad, y:a.y-pad, w:w+2*pad, h:h+2*pad});
+    }
+    function zoomBy(f){
+      const w=Math.min(Math.max(vb.w*f, 2), lay.value.root._w*4), h=vb.h*w/vb.w;
+      glide({x:vb.x+(vb.w-w)/2, y:vb.y+(vb.h-h)/2, w, h});
+    }
+    // the hover card: what is under the pointer, without waiting for the browser's tooltip
+    const hover = ref(null);
+    function hoverAt(e){
+      if (e.pointerType==='touch' || ptrs.size) { hover.value=null; return; }
+      const bay=e.target.closest && e.target.closest('[data-bay]'), box=!bay && e.target.closest && e.target.closest('[data-id]');
+      const sl=bay && slotByWh.value[bay.getAttribute('data-bay')], lv=sl && sl.levels.find(x=>x.wh===bay.getAttribute('data-lv'));
+      const it = lv ? {kind:'lv', label:(sl.label||shortWh(sl.wh))+' › '+lvShort(lv, sl), type:'Level', ws:sl.ws, lv,
+          st:{bays:1, used:lvHasStock(lv)?1:0, fill:lvFill(lv)}}
+        : sl ? bayItem(sl)
+        : box && lay.value.nodes[box.getAttribute('data-id')] ? nodeItem(lay.value.nodes[box.getAttribute('data-id')]) : null;
+      if (!it) { hover.value=null; return; }
+      const r=svgEl.value.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
+      hover.value={it, x:x>r.width-260?x-250:x+14, y:y>r.height-120?y-100:y+14};
+    }
+    // pan with a drag, zoom with the wheel or a pinch; a click picks a block and glides to it, a double click (or Open) goes in
+    const ptrs=new Map(); let moved=0, pinch=0;
+    const unit=()=>{ const r=svgEl.value.getBoundingClientRect(); return Math.max(vb.w/r.width, vb.h/r.height); };
+    function zoom(f, cx, cy){
+      cancelAnimationFrame(anim);
+      const r=svgEl.value.getBoundingClientRect(), k=unit();
+      const px=vb.x+(cx-r.left-(r.width-vb.w/k)/2)*k, py=vb.y+(cy-r.top-(r.height-vb.h/k)/2)*k;  // the point under the pointer stays put
+      const w=Math.min(Math.max(vb.w*f, 2), lay.value.root._w*4), s=w/vb.w;
+      Object.assign(vb, {x:px-(px-vb.x)*s, y:py-(py-vb.y)*s, w, h:vb.h*s});
+    }
+    function onWheel(e){ e.preventDefault(); hover.value=null; zoom(Math.exp(e.deltaY*.0015), e.clientX, e.clientY); }
+    function onDown(e){ ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved=0; hover.value=null; if (ptrs.size===2) { const [a,b]=[...ptrs.values()]; pinch=Math.hypot(a.x-b.x,a.y-b.y); } }
+    function onMove(e){
+      const p=ptrs.get(e.pointerId); if (!p) return hoverAt(e);
+      cancelAnimationFrame(anim);
+      if (ptrs.size===2) {
+        ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+        const [a,b]=[...ptrs.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
+        if (pinch && d) zoom(pinch/d, (a.x+b.x)/2, (a.y+b.y)/2);
+        pinch=d; moved=99; return;
+      }
+      const k=unit(), dx=e.clientX-p.x, dy=e.clientY-p.y;
+      moved+=Math.abs(dx)+Math.abs(dy);
+      if (moved>4) { vb.x-=dx*k; vb.y-=dy*k; }
+      ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    }
+    function onUp(e){ ptrs.delete(e.pointerId); if (ptrs.size<2) pinch=0; }
+    function onLeave(e){ onUp(e); hover.value=null; }
+    function onClick(e){
+      if (moved>4) return;
+      const bay=e.target.closest('[data-bay]');
+      if (bay && bay.getAttribute('data-lv')) return actions.open2DModalLevel(bay.getAttribute('data-bay'), bay.getAttribute('data-lv'));
+      if (bay) return actions.open2DModal(bay.getAttribute('data-bay'));
+      const box=e.target.closest('[data-id]');
+      if (box) zoomTo(box);
+      sel.value = box ? box.getAttribute('data-id') : null;
+    }
+    function onDbl(e){
+      const box=e.target.closest('[data-id]');
+      const id=box && box.getAttribute('data-id');
+      if (id && id!==lay.value.root.id && lay.value.nodes[id]) open(nodeItem(lay.value.nodes[id]));
+    }
+
+    return { store, actions, view, path, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
+      TYPE_CLR, TONE_CLR, TONE_NAME, shown, more, TILES, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onLeave, onClick, onDbl, hover, zoomBy, scaleBar, sel };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
-      <div class="wt-2d-wrap">
-        <template v-if="sections.length">
-          <div v-for="sec in sections" :key="sec.key" class="wt-2d-sec">
-            <div class="wt-2d-sec-hdr">
-              <div class="wt-2d-sec-name">{{sec.key}}</div>
-              <div :class="['wt-2d-sec-cnt', sec.cntCls]">{{sec.occ}}/{{sec.tiles.length}}</div>
-            </div>
-            <div class="wt-2d-sec-cap">
-              <div class="wt-2d-sec-cap-fill" :style="{width:sec.avgFp+'%',background:sec.barClr}"></div>
-            </div>
-            <div class="wt-2d-slots" :style="{'grid-template-columns':'repeat('+sec.cols+',1fr)'}">
-              <div v-for="(sl,ti) in sec.tiles" :key="sl.wh"
-                :class="['wt-2d-tile', tileCls(sl)]"
-                :style="{'animation-delay':ti*30+'ms'}"
-                :title="zoneLabel(sl)+sl.wh+(hasStock(sl)?'\\n'+fmtUoms(qtyByUom(sl.levels),20):'\\nEmpty')"
-                @click="actions.open2DModal(sl.wh)">
-                <div class="wt-2d-tile-name">{{sl.shortName}}</div>
-                <div class="wt-2d-tile-qty">{{hasStock(sl)?tileQty(sl):'—'}}</div>
-                <div v-if="sl.levels && sl.levels.length>1" class="wt-2d-levels">
-                  <div v-for="lv in [...sl.levels].reverse()" :key="lv.wh"
-                    class="wt-2d-lv-row"
-                    @click.stop="actions.open2DModalLevel(sl.wh, lv.wh)">
-                    <div class="wt-2d-lv-dot" :style="{background:lvColor(lv)}"></div>
-                    <div class="wt-2d-lv-name">{{lv.label.split('/').pop()}}</div>
-                    <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}"
-                      :title="(lv.serials||[]).map(x=>x.sn).join(', ')">
-                      {{lvHasStock(lv)?(lvTag(lv)||lvQty(lv)):'—'}}
-                    </div>
-                    <span v-for="b in (lv.badges||[])" :key="b.label" :class="['wt-badge', b.color]">{{b.label}}</span>
+      <div v-if="!view" class="wt-g-empty">Pick a warehouse in the tree.</div>
+      <div v-else class="wt-g-wrap">
+        <div class="wt-g-head">
+          <div class="wt-g-crumbs">
+            <template v-for="id in path" :key="id"><a @click="up(id)">{{shortWh(id)}}</a><span>›</span></template>
+            <b>{{view.root.label}}</b>
+            <span class="wt-g-chip" :style="{'--c':typeClr(view.root.type)}">{{typeName(view.root.type, view.root.ws, view.root.isGroup)}}</span>
+          </div>
+          <div class="wt-g-modes">
+            <button :class="{on:store.v2Mode!=='plan'}" @click="setMode('cards')">▦ Cards</button>
+            <button :class="{on:store.v2Mode==='plan'}" @click="setMode('plan')">⌗ Plan</button>
+          </div>
+        </div>
+        <div v-if="view.kpis.length" class="wt-g-kpis">
+          <div v-for="k in view.kpis" :key="k.label" class="wt-g-kpi"><b :style="k.clr?{color:k.clr}:null">{{k.v}}</b><span>{{k.label}}</span></div>
+        </div>
+        <div class="wt-g-legend">
+          <span class="wt-g-lg-t">Type</span>
+          <span v-for="(c,t) in TYPE_CLR" :key="t"><i class="ring" :style="{'--c':c}"></i>{{L(t, false, view.root.ws)}}</span>
+          <span class="wt-g-lg-t">Fill</span>
+          <span v-for="(c,t) in TONE_CLR" :key="t"><i :style="{background:c}"></i>{{TONE_NAME[t]}}</span>
+          <span><i class="e"></i>Empty</span>
+        </div>
+
+        <div v-if="store.v2Mode!=='plan'" class="wt-g-grid">
+          <div v-if="!view.cards.length" class="wt-g-empty">Nothing inside {{view.root.label}}.</div>
+          <template v-for="(c,i) in view.cards.slice(0, shown)" :key="c.id">
+            <div v-if="c.group && c.group!==(view.cards[i-1]||{}).group" class="wt-g-zone">{{c.group}}<span>{{view.counts[c.group]}}</span></div>
+            <div :class="['wt-g-card', c.tone?'f-'+c.tone:'', c.st.used?'':'quiet', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
+              <div class="wt-g-card-hd" role="button" tabindex="0" @click="open(c)" @keydown.enter="open(c)" :title="c.kind==='bay'?'Open the stock':'Open '+c.label">
+                <span class="wt-g-chip" :style="{'--c':typeClr(c.type)}">{{typeName(c.type, c.ws, c.isGroup)}}</span>
+                <span class="wt-g-name">{{c.label}}</span>
+                <span class="wt-g-go">{{c.kind==='bay'?'◫':'›'}}</span>
+              </div>
+              <div class="wt-g-stats">
+                <span v-if="c.kind!=='bay'">{{c.kids.length}} inside</span>
+                <span v-if="c.st.bays && c.kind!=='bay'">{{c.st.used}}/{{c.st.bays}} {{l('Slot', true, c.ws)}} with stock</span>
+                <span v-if="c.kind==='bay'">{{c.st.used?fmtUoms(qtyByUom(c.slot.levels),2):'Empty'}}</span>
+                <span v-if="c.st.fill!=null && c.st.used" :style="{color:fillClr(c.st), fontWeight:700}">{{c.st.fill}}% full</span>
+              </div>
+              <div class="wt-g-bar"><i :style="{width:(c.st.fill||0)+'%', background:fillClr(c.st)}"></i></div>
+              <div v-if="c.kind==='bay'" class="wt-2d-levels">
+                <div v-for="lv in [...c.slot.levels].reverse()" :key="lv.wh" class="wt-2d-lv-row" @click.stop="actions.open2DModalLevel(c.id, lv.wh)">
+                  <div class="wt-2d-lv-dot" :style="{background:lvColor(lv)}"></div>
+                  <span class="wt-g-chip sm" :style="{'--c':typeClr('Level')}">{{L('Level', false, c.ws)}}</span>
+                  <div class="wt-2d-lv-name">{{lv.label.split('/').pop()}}</div>
+                  <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}" :title="(lv.serials||[]).map(x=>x.sn).join(', ')">
+                    {{lvHasStock(lv)?(lvTag(lv)||lvQty(lv)):'—'}}
                   </div>
+                  <span v-for="b in (lv.badges||[])" :key="b.label" :class="['wt-badge', b.color]">{{b.label}}</span>
                 </div>
-                <div class="wt-2d-tile-bar" :style="{background:hasStock(sl)?FCH(slotFill(sl)):'transparent'}"></div>
+              </div>
+              <div v-else-if="c.kids.length" class="wt-g-tiles">
+                <div v-for="k in c.kids.slice(0, TILES)" :key="k.id" :class="['wt-g-tile', k.tone?'f-'+k.tone:'', k.st.hit?'':'dim']"
+                  :style="{'--c':typeClr(k.type)}" role="button" tabindex="0" @click="open(k)" @keydown.enter="open(k)"
+                  :title="typeName(k.type,k.ws,k.isGroup)+' · '+k.label+(k.st.bays?' · '+k.st.used+'/'+k.st.bays+' with stock':'')">
+                  <span class="wt-g-tile-name">{{k.label}}</span>
+                  <span class="wt-g-tile-meta">{{k.kind==='bay' ? (k.st.used?fmtUoms(qtyByUom(k.slot.levels),1):'—') : typeName(k.type,k.ws,k.isGroup)+(k.st.bays?' · '+k.st.used+'/'+k.st.bays:'')}}</span>
+                </div>
+                <div v-if="c.kids.length>TILES" class="wt-g-tile wt-g-more" role="button" tabindex="0" @click="open(c)" @keydown.enter="open(c)">
+                  <span class="wt-g-tile-name">+{{c.kids.length-TILES}} more</span><span class="wt-g-tile-meta">Open to see all</span>
+                </div>
               </div>
             </div>
+          </template>
+          <div v-if="shown<view.cards.length" ref="more" class="wt-g-zone wt-g-loadmore">Showing {{shown}} of {{view.cards.length}} · scroll for more</div>
+        </div>
+
+        <div v-else class="wt-g-plan">
+          <svg ref="svgEl" :viewBox="vb.x+' '+vb.y+' '+vb.w+' '+vb.h" preserveAspectRatio="xMidYMid meet"
+            @wheel="onWheel" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp" @pointerleave="onLeave"
+            @click="onClick" @dblclick="onDbl" v-html="planSvg"></svg>
+          <div class="wt-g-zoom">
+            <button @click="zoomBy(.6)" title="Zoom in">+</button>
+            <button @click="zoomBy(1/.6)" title="Zoom out">−</button>
+            <button @click="fit(true); sel=null" title="Fit the whole plan">⤢</button>
           </div>
-        </template>
-        <div v-else style="padding:32px;color:var(--wt-text3);font-size:13px">
-          <span v-if="store.searchQuery">No warehouses found with stock for "<b style="color:var(--wt-text2)">{{store.searchQuery}}</b>"</span>
-          <span v-else>No {{l('Slot', 1)}} to display</span>
+          <div v-if="hover" class="wt-g-tip" :style="{left:hover.x+'px', top:hover.y+'px'}">
+            <div class="wt-g-tip-hd"><span class="wt-g-chip sm" :style="{'--c':typeClr(hover.it.type)}">{{typeName(hover.it.type, hover.it.ws, hover.it.isGroup)}}</span><b>{{hover.it.label}}</b></div>
+            <div v-if="hover.it.kind==='lv'">{{lvHasStock(hover.it.lv) ? (lvTag(hover.it.lv) ? lvTag(hover.it.lv)+' · ' : '')+fmtUoms(qtyByUom([hover.it.lv]), 3) : 'Empty'}}</div>
+            <div v-else-if="hover.it.kind==='bay'">{{hover.it.st.used ? fmtUoms(qtyByUom(hover.it.slot.levels), 3) : 'Empty'}}</div>
+            <div v-else-if="hover.it.st.bays">{{hover.it.st.used}}/{{hover.it.st.bays}} {{l('Slot', true, hover.it.ws)}} with stock</div>
+            <div v-else>No {{l('Slot', true, hover.it.ws)}} inside</div>
+            <template v-if="hover.it.st.fill!=null && hover.it.st.used">
+              <div class="wt-g-bar"><i :style="{width:Math.min(hover.it.st.fill,100)+'%', background:fillClr(hover.it.st)}"></i></div>
+              <div :style="{color:fillClr(hover.it.st), fontWeight:700}">{{hover.it.st.fill}}% full</div>
+            </template>
+            <div class="wt-g-tip-ft">{{hover.it.kind!=='node' ? 'Click to open the stock' : 'Click to zoom · double-click to open'}}</div>
+          </div>
+          <div v-if="scaleBar" class="wt-g-scale"><i :style="{width:scaleBar.px+'px'}"></i>{{scaleBar.label}}</div>
+          <div v-if="selItem" class="wt-g-sel">
+            <span class="wt-g-chip" :style="{'--c':typeClr(selItem.type)}">{{typeName(selItem.type, selItem.ws, selItem.isGroup)}}</span>
+            <b>{{selItem.label}}</b>
+            <span v-if="selItem.st.bays">{{selItem.st.used}}/{{selItem.st.bays}} {{l('Slot', true, selItem.ws)}} with stock</span>
+            <span v-if="selItem.st.fill!=null" :style="{color:fillClr(selItem.st), fontWeight:700}">{{selItem.st.fill}}% full</span>
+            <button @click="open(selItem)">Open ›</button>
+          </div>
+          <div class="wt-g-hint">Drag to move · wheel or pinch to zoom · click to zoom in · double-click to open</div>
         </div>
       </div>
     </div>
@@ -3429,7 +3818,7 @@ const SetupWizard = defineComponent({
 
           <div class="wt-setup-actions">
             <span></span>
-            <button class="wt-setup-btn wt-setup-btn-primary" @click="actions.finishSetup()">Open Warehouse 3D →</button>
+            <button class="wt-setup-btn wt-setup-btn-primary" @click="actions.finishSetup()">Open Warehouse Map →</button>
           </div>
         </template>
 
@@ -3484,7 +3873,7 @@ const App = defineComponent({
       <template v-if="store.setupChecking">
         <div class="wt-loading" style="position:relative;height:100%">
           <div class="wt-spinner"></div>
-          <div class="wt-loading-text">Loading Warehouse 3D…</div>
+          <div class="wt-loading-text">Loading Warehouse Map…</div>
         </div>
       </template>
       <template v-else-if="!store.setupComplete">

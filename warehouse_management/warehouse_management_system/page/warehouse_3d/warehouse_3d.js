@@ -2,7 +2,7 @@
 frappe.pages["warehouse-3d"].on_page_load = function (wrapper) {
 	frappe.ui.make_app_page({
 		parent: wrapper,
-		title: "Warehouse 3D",
+		title: "Warehouse Map",
 		single_column: true,
 	});
 
