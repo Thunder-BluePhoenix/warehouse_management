@@ -388,40 +388,63 @@ const CSS = `
 #wt-view2d{position:absolute;left:var(--wt-sbw);right:0;top:44px;bottom:0;overflow:auto;display:none;background:var(--wt-bg)}
 #wt-view2d::-webkit-scrollbar{width:5px}
 #wt-view2d::-webkit-scrollbar-thumb{background:var(--wt-border);border-radius:10px}
-.wt-2d-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:16px}
-.wt-2d-sec{background:var(--wt-bg2);border-radius:14px;padding:12px;border:1.5px solid var(--wt-cb);box-shadow:0 1px 4px rgba(0,0,0,.06);transition:border-color .15s,box-shadow .15s}
-.wt-2d-sec:hover{border-color:var(--wt-accent);box-shadow:0 4px 14px rgba(49,130,206,.1)}
-.wt-2d-sec-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:7px;border-bottom:1px solid var(--wt-border)}
-.wt-2d-sec-name{font-size:11px;font-weight:800;color:var(--wt-text)}
-.wt-2d-sec-cnt{font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap}
-.wt-2d-sec-cnt.red{background:#fff5f5;color:#c53030}
-.wt-2d-sec-cnt.org{background:#fffaf0;color:#c05621}
-.wt-2d-sec-cnt.grn{background:#f0fff4;color:#276749}
-#wt-app.dark .wt-2d-sec-cnt.red{background:rgba(197,48,48,.15);color:#fc8181}
-#wt-app.dark .wt-2d-sec-cnt.org{background:rgba(192,86,33,.15);color:#fbd38d}
-#wt-app.dark .wt-2d-sec-cnt.grn{background:rgba(39,103,73,.15);color:#68d391}
-.wt-2d-sec-cap{height:3px;background:var(--wt-cb);border-radius:2px;margin-bottom:8px;overflow:hidden}
-.wt-2d-sec-cap-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.34,1.56,.64,1)}
-.wt-2d-slots{display:grid;gap:5px}
-.wt-2d-tile{border-radius:8px;padding:7px 5px 5px;display:flex;flex-direction:column;align-items:center;cursor:pointer;text-align:center;border:1.5px solid var(--wt-cb);background:var(--wt-card);transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .12s;position:relative;animation:wt2dIn .35s cubic-bezier(.34,1.56,.64,1) both;height:auto}
-@keyframes wt2dIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:none}}
-.wt-2d-tile:hover{transform:translateY(-2px) scale(1.04);box-shadow:0 6px 16px rgba(0,0,0,.14);z-index:2}
-.wt-2d-tile.empty{background:repeating-linear-gradient(-45deg,rgba(0,0,0,.04) 0,rgba(0,0,0,.04) 2px,transparent 2px,transparent 7px);border-color:var(--wt-cb)}
-.wt-2d-tile.low{background:rgba(74,222,128,.12);border-color:#4ade80}
-.wt-2d-tile.mid{background:rgba(250,204,21,.12);border-color:#facc15}
-.wt-2d-tile.high{background:rgba(251,146,60,.12);border-color:#fb923c}
-.wt-2d-tile.full{background:rgba(248,113,113,.12);border-color:#f87171}
-.wt-2d-tile.over{background:rgba(185,28,28,.22);border-color:#b91c1c}
-.wt-2d-tile.nocap{background:rgba(100,116,139,.14);border-color:#64748b}
-#wt-app.light .wt-2d-tile.low{background:#f0fdf4;border-color:#22c55e}
-#wt-app.light .wt-2d-tile.mid{background:#fefce8;border-color:#eab308}
-#wt-app.light .wt-2d-tile.high{background:#fff7ed;border-color:#f97316}
-#wt-app.light .wt-2d-tile.full{background:#fef2f2;border-color:#ef4444}
-.wt-2d-tile-name{font-size:10px;font-weight:800;color:var(--wt-text);line-height:1.2;word-break:break-all}
-.wt-2d-tile.empty .wt-2d-tile-name{color:var(--wt-text3)}
-.wt-2d-tile-qty{font-size:8px;font-weight:600;color:var(--wt-text2);margin-top:2px}
-.wt-2d-tile.empty .wt-2d-tile-qty{color:var(--wt-border)}
-.wt-2d-tile-bar{position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 6px 6px}
+.wt-g-empty{padding:32px;color:var(--wt-text3);font-size:13px}
+.wt-g-head{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:12px 16px 4px}
+.wt-g-crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--wt-text2);min-width:0}
+.wt-g-crumbs a{cursor:pointer;color:var(--wt-accent);text-decoration:none}
+.wt-g-crumbs a:hover{text-decoration:underline}
+.wt-g-crumbs b{color:var(--wt-text);font-size:14px;word-break:break-word}
+.wt-g-crumbs>span:not(.wt-g-chip){color:var(--wt-text3)}
+.wt-g-meta{font-size:11px;color:var(--wt-text3)}
+.wt-g-chip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;padding:2px 6px;border-radius:5px;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);border:1px solid color-mix(in srgb,var(--c) 45%,transparent)}
+.wt-g-chip.sm{font-size:8px;padding:1px 4px}
+.wt-g-modes{display:flex;border:1px solid var(--wt-border);border-radius:8px;overflow:hidden}
+.wt-g-modes button{background:transparent;border:0;color:var(--wt-text2);font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer}
+.wt-g-modes button.on{background:var(--wt-accent);color:#fff}
+.wt-g-legend{display:flex;flex-wrap:wrap;gap:4px 12px;padding:2px 16px 8px;font-size:10px;color:var(--wt-text3)}
+.wt-g-legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.wt-g-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;padding:4px 16px 24px;align-items:start}
+.wt-g-zone{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--wt-text2);padding-top:6px;border-bottom:1px solid var(--wt-border)}
+.wt-g-card{background:var(--wt-bg2);border:1.5px solid var(--wt-cb);border-top:3px solid var(--c);border-radius:12px;padding:10px;min-width:0}
+.wt-g-card.dim,.wt-g-tile.dim{opacity:.3}
+.wt-g-card-hd{display:flex;align-items:center;gap:6px;cursor:pointer}
+.wt-g-card-hd:hover .wt-g-name{color:var(--wt-accent)}
+.wt-g-name{flex:1;min-width:0;font-size:12px;font-weight:800;color:var(--wt-text);word-break:break-word}
+.wt-g-go{color:var(--wt-text3);font-weight:800}
+.wt-g-stats{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:10px;color:var(--wt-text3);margin:6px 0 5px}
+.wt-g-bar{height:3px;background:var(--wt-cb);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.wt-g-bar i{display:block;height:100%;border-radius:2px}
+.wt-g-tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:5px}
+.wt-g-tile{display:flex;flex-direction:column;gap:2px;padding:5px 6px;border-radius:7px;cursor:pointer;background:var(--wt-card);border:1px solid var(--wt-cb);border-left:3px solid var(--c);min-width:0}
+.wt-g-tile:hover{border-color:var(--wt-accent)}
+.wt-g-tile-name{font-size:10px;font-weight:700;color:var(--wt-text);word-break:break-word;line-height:1.2}
+.wt-g-tile-meta{font-size:9px;color:var(--wt-text3)}
+.wt-g-card.bay.low,.wt-g-tile.bay.low{background:rgba(74,222,128,.10)}
+.wt-g-card.bay.mid,.wt-g-tile.bay.mid{background:rgba(250,204,21,.10)}
+.wt-g-card.bay.high,.wt-g-tile.bay.high{background:rgba(251,146,60,.12)}
+.wt-g-card.bay.full,.wt-g-tile.bay.full{background:rgba(248,113,113,.12)}
+.wt-g-card.bay.over,.wt-g-tile.bay.over{background:rgba(185,28,28,.2)}
+.wt-g-card.bay.nocap,.wt-g-tile.bay.nocap{background:rgba(100,116,139,.12)}
+.wt-g-wrap{display:flex;flex-direction:column;height:100%}
+.wt-g-head,.wt-g-legend,.wt-g-grid{flex:none}
+.wt-g-plan{position:relative;flex:1;min-height:300px}
+.wt-g-plan svg{width:100%;height:100%;display:block;touch-action:none;cursor:grab;user-select:none}
+.wt-g-plan svg:active{cursor:grabbing}
+.wt-p-box{cursor:pointer;stroke-width:1.2}
+.wt-p-box:hover{stroke-width:2.2}
+.wt-p-box.sel{stroke-width:3;stroke:var(--wt-accent)}
+.wt-p-bay{cursor:pointer;stroke-width:1}
+.wt-p-bay:hover{stroke-width:2.4}
+.wt-p-name,.wt-p-type,.wt-p-bayname{paint-order:stroke;stroke:var(--wt-bg);stroke-width:.22em;stroke-linejoin:round}
+.wt-p-name{fill:var(--wt-text);font-weight:800;pointer-events:none}
+.wt-p-type{font-weight:800;text-transform:uppercase;pointer-events:none}
+.wt-p-bayname{fill:var(--wt-text);font-weight:700;pointer-events:none}
+.wt-g-fit{position:absolute;right:14px;top:10px;width:32px;height:32px;border-radius:8px;border:1px solid var(--wt-border);background:var(--wt-bg2);color:var(--wt-text);cursor:pointer;font-size:16px}
+.wt-g-sel{position:absolute;left:14px;right:60px;top:10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px 10px;border-radius:10px;background:var(--wt-bg2);border:1px solid var(--wt-border);font-size:12px;color:var(--wt-text2);max-width:640px}
+.wt-g-sel b{color:var(--wt-text);word-break:break-word}
+.wt-g-sel button{margin-left:auto;background:var(--wt-accent);color:#fff;border:0;border-radius:7px;padding:4px 12px;font-weight:700;cursor:pointer}
+.wt-g-hint{position:absolute;left:14px;bottom:10px;font-size:10px;color:var(--wt-text3);pointer-events:none}
+@media (max-width:600px){#wt-view2d{left:0}.wt-g-grid{grid-template-columns:1fr;padding:4px 10px 20px}.wt-g-head{padding:10px 10px 4px}.wt-g-legend{padding:2px 10px 6px}.wt-g-hint{display:none}}
 .wt-2d-levels{width:100%;margin-top:5px;display:flex;flex-direction:column;gap:3px}
 .wt-badge{font-size:8px;font-weight:800;padding:1px 5px;border-radius:4px;margin-left:3px;background:rgba(100,116,139,.2);color:#94a3b8;white-space:nowrap}.wt-badge.red{background:rgba(248,113,113,.18);color:#f87171}.wt-badge.orange{background:rgba(251,146,60,.18);color:#fb923c}.wt-badge.blue{background:rgba(96,165,250,.18);color:#60a5fa}.wt-badge.green{background:rgba(74,222,128,.18);color:#4ade80}
 .wt-2d-lv-row{display:flex;align-items:center;gap:4px;padding:3px 4px;border-radius:4px;background:rgba(255,255,255,.05);cursor:pointer;transition:background .12s}
@@ -697,6 +720,7 @@ const store = reactive({
   whDeleting: false,
   whBayTypes: [],
   imAllItems: {},     // level warehouse -> full item list, loaded on demand
+  v2Mode: (()=>{ try { return localStorage.getItem('wt3d_2d_mode')||'cards'; } catch(e) { return 'cards'; } })(),  // 2D: cards or plan
   searchHits: [],     // serial / batch / item hits across floors (server)
   searchOpen: false,
   toast: null,
@@ -1043,42 +1067,7 @@ class ThreeEngine {
     this.meshMap={}; this.blockMap={}; store.selKey=null;
     const bgCol=store.isDark?0x0c0e14:0xf0f2f5;
     this.scene.background.setHex(bgCol); this.scene.fog.color.setHex(bgCol); this.renderer.setClearColor(bgCol,1);
-    const nodes=Object.fromEntries(data.nodes.map(n=>[n.id, n]));
-    const kids={};
-    data.nodes.forEach(n=>{ if (n.id!==data.root && nodes[n.parent]) (kids[n.parent]=kids[n.parent]||[]).push(n); });
-    const PAD=2, GAP=3, LEAF=[8,5];
-    const measure=(n)=>{
-      const L=parseFloat(n.length)||0, B=parseFloat(n.breadth)||0;
-      if (n.type==='Floor') {
-        const slots=data.slots[n.id]||[];
-        n._slots=slots; n._layout=this.slotPlaces(slots);
-        const cw=n._layout.w+1, cd=n._layout.d+1;  // half a metre round the racks
-        n._scale=(L&&B)?Math.min(L/cw, B/cd):1;
-        return [L||cw, B||cd];
-      }
-      const ks=kids[n.id]||[];
-      if (!ks.length) return [L||LEAF[0], B||LEAF[1]];
-      ks.forEach(k=>{ const [w,d]=measure(k); [k._w,k._d]=String(k.rotation)==='90'?[d,w]:[w,d]; });
-      let maxX=0, maxY=0;
-      ks.filter(k=>k.x!=null||k.y!=null).forEach(k=>{
-        k._x=parseFloat(k.x)||0; k._y=parseFloat(k.y)||0; maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
-      });
-      const free=ks.filter(k=>k.x==null&&k.y==null);
-      if (free.length) {  // packed in rows below what is placed
-        const area=free.reduce((a,k)=>a+k._w*k._d,0);
-        const rowW=Math.max(L, maxX, Math.sqrt(area)*1.5, ...free.map(k=>k._w+2*PAD));
-        let x=PAD, y=maxY?maxY+GAP:PAD, rowH=0;
-        free.forEach(k=>{
-          if (x>PAD && x+k._w>rowW) { x=PAD; y+=rowH+GAP; rowH=0; }
-          k._x=x; k._y=y; x+=k._w+GAP; rowH=Math.max(rowH,k._d);
-          maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
-        });
-      }
-      return [L||maxX+PAD, B||maxY+PAD];
-    };
-    const root=nodes[data.root];
-    const [W,D]=measure(root);
-    root._w=W; root._d=D;
+    const {nodes, kids, root}=mapLayout(data), W=root._w, D=root._d;
     const TONE=store.isDark?[0x1d2a44,0x22324f,0x1a2438,0x253555]:[0xdfe7f3,0xd3deee,0xe8eef7,0xcbd7ea];
     const draw=(n, frame, depth)=>{
       const grp=new THREE.Group(); grp.position.set(n._x||0, 0, n._y||0); frame.add(grp);
@@ -1305,6 +1294,49 @@ class ThreeEngine {
 }
 
 const engine = new ThreeEngine();
+// Where each warehouse of a map goes, in metres from its parent's corner (_x, _y), and its size (_w, _d): placed ones
+// where they were put, the rest packed in rows below; a Floor fits its slots (_layout, _scale). The 3D map and the
+// 2D plan both draw from it. It writes onto data's nodes: pass the 2D view a copy that is not reactive.
+function mapLayout(data) {
+  const nodes=Object.fromEntries(data.nodes.map(n=>[n.id, n]));
+  const kids={};
+  data.nodes.forEach(n=>{ if (n.id!==data.root && nodes[n.parent]) (kids[n.parent]=kids[n.parent]||[]).push(n); });
+  const PAD=2, GAP=3, LEAF=[8,5];
+  const measure=(n)=>{
+    const L=parseFloat(n.length)||0, B=parseFloat(n.breadth)||0;
+    if (n.type==='Floor') {
+      const slots=data.slots[n.id]||[];
+      n._slots=slots; n._layout=engine.slotPlaces(slots);
+      const cw=n._layout.w+1, cd=n._layout.d+1;  // half a metre round the racks
+      n._scale=(L&&B)?Math.min(L/cw, B/cd):1;
+      return [L||cw, B||cd];
+    }
+    const ks=kids[n.id]||[];
+    if (!ks.length) return [L||LEAF[0], B||LEAF[1]];
+    ks.forEach(k=>{ const [w,d]=measure(k); [k._w,k._d]=String(k.rotation)==='90'?[d,w]:[w,d]; });
+    let maxX=0, maxY=0;
+    ks.filter(k=>k.x!=null||k.y!=null).forEach(k=>{
+      k._x=parseFloat(k.x)||0; k._y=parseFloat(k.y)||0; maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
+    });
+    const free=ks.filter(k=>k.x==null&&k.y==null);
+    if (free.length) {  // packed in rows below what is placed
+      const area=free.reduce((a,k)=>a+k._w*k._d,0);
+      const rowW=Math.max(L, maxX, Math.sqrt(area)*1.5, ...free.map(k=>k._w+2*PAD));
+      let x=PAD, y=maxY?maxY+GAP:PAD, rowH=0;
+      free.forEach(k=>{
+        if (x>PAD && x+k._w>rowW) { x=PAD; y+=rowH+GAP; rowH=0; }
+        k._x=x; k._y=y; x+=k._w+GAP; rowH=Math.max(rowH,k._d);
+        maxX=Math.max(maxX,k._x+k._w); maxY=Math.max(maxY,k._y+k._d);
+      });
+    }
+    return [L||maxX+PAD, B||maxY+PAD];
+  };
+  const root=nodes[data.root];
+  const [W,D]=measure(root);
+  root._w=W; root._d=D;
+  return {nodes, kids, root};
+}
+
 // the open view drawn again: the map of a warehouse, or one Floor's racks (search-filtered)
 function redraw(keepCamera=false) {
   if (store.mapMode && store.mapData) engine.buildMap(store.mapData, keepCamera);
@@ -1582,8 +1614,7 @@ const actions = {
       store.mapData=data;
       store.slots=Object.values(data.slots||{}).flat();  // the counts at the top cover the whole map
       if (data.too_many) notify(`Only the first ${Object.keys(data.slots).length} ${l('Floor', true)} are drawn in full`, 'orange');
-      if (store.curView!=='3d') actions.setView('3d'); else redraw();
-      engine.springIn();
+      if (store.curView==='3d') { redraw(); engine.springIn(); }  // 2D draws itself from mapData
     } catch(e){ console.error('WT: map', e); notify('Could not load the map: '+(e.message||e), 'red'); }
     finally { store.loading=false; }
   },
@@ -2012,7 +2043,7 @@ const actions = {
   },
 
   setView(v) {
-    if (v==='2d' && store.mapMode) { notify(`The 2D view shows one ${l('Floor')}: pick one in the tree`, 'orange'); return; }
+    if (v==='2d' && store.mapEdit) { notify('Save or cancel the layout first', 'orange'); return; }
     store.curView=v;
     const cw3d=document.getElementById('wt-cw');
     const v2d=document.getElementById('wt-view2d');
@@ -2020,7 +2051,7 @@ const actions = {
     if(cw3d) cw3d.style.display=v==='3d'?'block':'none';
     if(v2d){
       v2d.style.display=v==='2d'?'block':'none';
-      if(isMobile) v2d.style.top='80px';
+      v2d.style.top=isMobile ? ((document.getElementById('wt-top')||{}).offsetHeight||80)+'px' : '';  // below the top bar, however tall it wraps
     }
     if (v==='3d' && (store.slots.length || store.mapMode)) redraw();
     engine._startAnimate();
@@ -2400,7 +2431,7 @@ const TopBar = defineComponent({
           <button :class="['wt-sw-btn', store.curView==='2d'?'act':'']" @click="actions.setView('2d')">⊞ 2D</button>
         </div>
         <button class="wt-theme-btn" @click="actions.toggleTheme()">{{store.isDark?'🌙':'☀️'}}</button>
-        <button v-if="store.mapMode && store.canEdit && !store.mapEdit" class="wt-sw-btn wt-map-edit-btn"
+        <button v-if="store.mapMode && store.canEdit && !store.mapEdit && store.curView==='3d'" class="wt-sw-btn wt-map-edit-btn"
           @click="store.mapEdit=true; store.mapHover=null" title="Drag areas and bays to where they stand">✎ Edit layout</button>
         <button v-if="store.curView==='3d' && !store.aisleMode && !store.mapMode"
           class="wt-sw-btn" style="background:rgba(99,102,241,.2);color:#a5b4fc;border:1px solid rgba(99,102,241,.4);border-radius:6px;height:26px;padding:0 10px"
@@ -3103,85 +3134,227 @@ const FloorPlanModal = defineComponent({
 /* ─────────────────────────────────────────────────────────────
    COMPONENT: View2D
 ───────────────────────────────────────────────────────────── */
+// The type of a warehouse in a word (WMS Settings > Location Labels), and its colour on cards, chips and the plan
+const TYPE_CLR = {Building:'#3b82f6', Floor:'#8b5cf6', Zone:'#14b8a6', Slot:'#f59e0b', Level:'#64748b', Tote:'#ec4899'};
+function typeClr(t) { return TYPE_CLR[t] || '#94a3b8'; }
+function typeName(t, ws, isGroup) { return t ? L(t, false, ws) : (isGroup===0 ? 'Warehouse' : 'Group'); }
+function escHtml(v) { return String(v==null?'':v).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const byName = (a,b)=>String(a).localeCompare(String(b), undefined, {numeric:true});
+
 const View2D = defineComponent({
   name: 'View2D',
   setup(){
-    const sections = computed(()=>{
-      const slots=filteredSlots();
-      const secMap={}, secOrder=[];
-      slots.forEach(sl=>{
-        const nm=(sl.label||sl.wh).replace(/\s*-\s*[A-Z]{1,8}$/,'').split('/').pop().trim();
-        // Zones group the tiles when the floor has them; otherwise fall back to the name prefix (A12 -> A)
-        const key=(sl.zone_path||[]).length ? sl.zone_path.join(' › ') : (nm.match(/^([A-Za-z]+)/)?.[1]||nm.substring(0,2));
-        if(!secMap[key]){secMap[key]=[];secOrder.push(key);}
-        secMap[key].push({...sl,shortName:nm});
-      });
-      secOrder.sort((a,b)=>a.localeCompare(b));
-      secOrder.forEach(key=>{if(secMap[key])secMap[key].sort((a,b)=>a.shortName.localeCompare(b.shortName));});
-      return secOrder.map(key=>{
-        const tiles=secMap[key];
-        const cols=tiles.length<=1?1:tiles.length<=4?2:3;
-        const occ=tiles.filter(s=>hasStock(s)).length;
-        const pct=tiles.length?Math.round((occ/tiles.length)*100):0;
-        const cntCls=pct>=80?'red':pct>=50?'org':'grn';
-        const known=tiles.map(slotFill).filter(p=>p!=null);
-        const avgFp=known.length?Math.round(known.reduce((a,b)=>a+b,0)/known.length):0;
-        const barClr=avgFp>0?FCH(avgFp):'var(--wt-border)';
-        return {key,tiles,cols,occ,cntCls,avgFp,barClr};
-      });
+    // What 2D draws: the open map, else the selected Floor, in the shape get_map returns. A copy: mapLayout writes on it.
+    const src = computed(()=>{
+      if (store.mapMode && store.mapData) return structuredClone(Vue.toRaw(store.mapData));
+      const g = store.curGrp;
+      if (!g) return null;
+      return {root:g.id, nodes:[{id:g.id, label:g.name||shortWh(g.id), type:'Floor', is_group:1, render_mode:g.render_mode, ws:g.ws}],
+        slots:{[g.id]: structuredClone(Vue.toRaw(store.slots))}};
+    });
+    const lay = computed(()=> src.value && src.value.nodes.length ? {...mapLayout(src.value), src:src.value} : null);
+    const hits = computed(()=> store.searchQuery ? new Set(filteredSlots().map(s=>s.wh)) : null);
+
+    const slotsUnder = (n)=> n.type==='Floor' ? (lay.value.src.slots[n.id]||[]) : (lay.value.kids[n.id]||[]).flatMap(slotsUnder);
+    function stats(slots){
+      const known = slots.map(slotFill).filter(p=>p!=null);
+      return {bays:slots.length, used:slots.filter(hasStock).length,
+        fill: known.length ? Math.round(known.reduce((a,b)=>a+b,0)/known.length) : null,
+        hit: !hits.value || slots.some(s=>hits.value.has(s.wh))};
+    }
+    function tileCls(sl){
+      const fp=slotFill(sl);
+      return !hasStock(sl)?'empty':fp==null?'nocap':fp>100?'over':fp>=90?'full':fp>=70?'high':fp>=40?'mid':'low';
+    }
+    const nodeItem = (n)=>({kind:'node', id:n.id, label:n.label||shortWh(n.id), type:n.type, isGroup:n.is_group, ws:n.ws, node:n, st:stats(slotsUnder(n))});
+    const bayItem = (sl)=>({kind:'bay', id:sl.wh, label:sl.label||shortWh(sl.wh), type:'Slot', ws:sl.ws, slot:sl,
+      zone:(sl.zone_path||[]).join(' › '), st:stats([sl]), cls:tileCls(sl)});
+    function childrenOf(it){
+      if (it.kind==='bay') return [];
+      if (it.type==='Floor') return [...(lay.value.src.slots[it.id]||[])]
+        .sort((a,b)=>byName(zoneLabel(a)+'\u0000'+(a.label||a.wh), zoneLabel(b)+'\u0000'+(b.label||b.wh))).map(bayItem);
+      return [...(lay.value.kids[it.id]||[])].sort((a,b)=>byName(a.label||a.id, b.label||b.id)).map(nodeItem);
+    }
+    // two levels at a time: the open warehouse's children as cards, and theirs inside each card
+    const view = computed(()=>{
+      if (!lay.value) return null;
+      const root = nodeItem(lay.value.root);
+      return {root, cards: childrenOf(root).map(c=>({...c, kids: childrenOf(c)}))};
     });
 
-    function tileCls(sl){
-      const fp=slotFill(sl), hs=hasStock(sl);
-      return !hs?'empty':fp==null?'nocap':fp>100?'over':fp>=90?'full':fp>=70?'high':fp>=40?'mid':'low';
+    // the breadcrumb: the open warehouse's parents, each one a click away
+    const path = ref([]);
+    watch(()=>view.value && view.value.root.id, async (id)=>{
+      path.value = [];
+      if (!id) return;
+      try { path.value = (await call('get_path', {warehouse:id})) || []; } catch(e) { path.value = []; }
+    }, {immediate:true});
+
+    function open(it){
+      if (it.kind==='bay') return actions.open2DModal(it.id);
+      actions.drillMap({id:it.id, label:it.label, type:it.type, render_mode:it.node.render_mode, ws:it.ws});
     }
-    function tileQty(sl){ return fmtUoms(qtyByUom(sl.levels), 1); }
+    function up(id){ actions.drillMap({id, label:shortWh(id)}); }
+    function setMode(m){ store.v2Mode=m; try { localStorage.setItem('wt3d_2d_mode', m); } catch(e) { /* private window */ } }
+    function fillClr(st){ return st.fill==null ? 'var(--wt-border)' : FCH(st.fill); }
     function lvColor(lv){ return lvHasStock(lv)?FCH(lvFill(lv)):'var(--wt-border)'; }
     function lvQty(lv){ return fmtUoms(qtyByUom([lv]), 1); }
 
-    return { store, sections, tileCls, tileQty, lvColor, lvQty, lvTag, actions, fmtK, fmt, FCH, slotFill, hasStock, lvHasStock, zoneLabel, fmtUoms, qtyByUom };
+    // ── the plan: the same layout as the 3D map, flat and to scale (SVG, metres) ──
+    const svgEl = ref(null), vb = reactive({x:0, y:0, w:100, h:60}), sel = ref(null);
+    const BAY_CLR = {low:'#22c55e', mid:'#eab308', high:'#f97316', full:'#ef4444', over:'#b91c1c', nocap:'#64748b'};
+    function fit(){
+      if (!lay.value) return;
+      const r=lay.value.root, m=Math.max(r._w, r._d)*.04;
+      Object.assign(vb, {x:-m, y:-m, w:r._w+2*m, h:r._d+2*m});
+    }
+    watch(()=>lay.value && lay.value.root.id, ()=>{ sel.value=null; fit(); }, {immediate:true});
+    const planSvg = computed(()=>{
+      if (!lay.value) return '';
+      const out=[], kids=lay.value.kids, rootId=lay.value.root.id;
+      const draw=(n, depth)=>{
+        const st=stats(slotsUnder(n)), c=typeClr(n.type), name=n.label||shortWh(n.id);
+        out.push(`<g transform="translate(${n._x||0},${n._y||0})"${st.hit?'':' opacity=".3"'}>`);
+        out.push(`<rect class="wt-p-box${sel.value===n.id?' sel':''}" data-id="${escHtml(n.id)}" width="${n._w}" height="${n._d}" rx="${Math.min(n._w,n._d)*.02}" fill="${c}" fill-opacity="${depth?.12:.04}" stroke="${c}" vector-effect="non-scaling-stroke"><title>${escHtml(name)} · ${escHtml(typeName(n.type,n.ws,n.is_group))}${st.bays?` · ${st.used}/${st.bays} with stock`:''}</title></rect>`);
+        if (n.id!==rootId) {
+          const fs=Math.max(.35, Math.min(depth<=1?3:1.6, n._d*.2, n._w*.94/(.6*Math.max(6, name.length))));
+          out.push(`<text class="wt-p-name" x="${fs*.4}" y="${fs*1.15}" font-size="${fs}">${escHtml(name)}</text>`);
+          out.push(`<text class="wt-p-type" x="${fs*.4}" y="${fs*2}" font-size="${fs*.62}" fill="${c}">${escHtml(typeName(n.type,n.ws,n.is_group))}</text>`);
+        }
+        out.push(String(n.rotation)==='90' ? `<g transform="translate(${n._w},0) rotate(90)">` : '<g>');
+        if (n.type==='Floor') {
+          const s=n._scale||1;
+          out.push(`<g transform="translate(${.5*s},${.5*s}) scale(${s})">`);
+          (n._slots||[]).forEach(sl=>{
+            const p=n._layout.places[sl.wh], cls=tileCls(sl), dim=hits.value && !hits.value.has(sl.wh);
+            out.push(`<rect class="wt-p-bay" data-bay="${escHtml(sl.wh)}" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.d}" rx=".15" fill="${BAY_CLR[cls]||'none'}" fill-opacity="${cls==='empty'?0:.55}" stroke="${BAY_CLR[cls]||'#94a3b8'}" vector-effect="non-scaling-stroke"${dim?' opacity=".2"':''}><title>${escHtml(sl.label||sl.wh)}${hasStock(sl)?'\n'+escHtml(fmtUoms(qtyByUom(sl.levels),20)):'\nEmpty'}</title></rect>`);
+            const bn=sl.label||shortWh(sl.wh), bfs=Math.min(.45, p.w*.94/(.6*Math.max(4,bn.length)));
+            if (bfs>.12) out.push(`<text class="wt-p-bayname" x="${p.x+p.w/2}" y="${p.y+p.d/2+bfs*.35}" font-size="${bfs}" text-anchor="middle">${escHtml(bn)}</text>`);
+          });
+          out.push('</g>');
+        } else (kids[n.id]||[]).forEach(k=>draw(k, depth+1));
+        out.push('</g></g>');
+      };
+      draw(lay.value.root, 0);
+      return out.join('');
+    });
+    const selItem = computed(()=>{
+      if (!sel.value || !lay.value || !lay.value.nodes[sel.value]) return null;
+      return nodeItem(lay.value.nodes[sel.value]);
+    });
+    // pan with a drag, zoom with the wheel or a pinch; a tap selects, a double click (or Open) goes in
+    const ptrs=new Map(); let moved=0, pinch=0;
+    const unit=()=>{ const r=svgEl.value.getBoundingClientRect(); return Math.max(vb.w/r.width, vb.h/r.height); };
+    function zoom(f, cx, cy){
+      const r=svgEl.value.getBoundingClientRect(), k=unit();
+      const px=vb.x+(cx-r.left-(r.width-vb.w/k)/2)*k, py=vb.y+(cy-r.top-(r.height-vb.h/k)/2)*k;  // the point under the pointer stays put
+      const w=Math.min(Math.max(vb.w*f, 2), lay.value.root._w*4), s=w/vb.w;
+      Object.assign(vb, {x:px-(px-vb.x)*s, y:py-(py-vb.y)*s, w, h:vb.h*s});
+    }
+    function onWheel(e){ e.preventDefault(); zoom(Math.exp(e.deltaY*.0015), e.clientX, e.clientY); }
+    function onDown(e){ ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved=0; if (ptrs.size===2) { const [a,b]=[...ptrs.values()]; pinch=Math.hypot(a.x-b.x,a.y-b.y); } }
+    function onMove(e){
+      const p=ptrs.get(e.pointerId); if (!p) return;
+      if (ptrs.size===2) {
+        ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+        const [a,b]=[...ptrs.values()], d=Math.hypot(a.x-b.x,a.y-b.y);
+        if (pinch && d) zoom(pinch/d, (a.x+b.x)/2, (a.y+b.y)/2);
+        pinch=d; moved=99; return;
+      }
+      const k=unit(), dx=e.clientX-p.x, dy=e.clientY-p.y;
+      moved+=Math.abs(dx)+Math.abs(dy);
+      if (moved>4) { vb.x-=dx*k; vb.y-=dy*k; }
+      ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    }
+    function onUp(e){ ptrs.delete(e.pointerId); if (ptrs.size<2) pinch=0; }
+    function onClick(e){
+      if (moved>4) return;
+      const bay=e.target.closest('[data-bay]');
+      if (bay) return actions.open2DModal(bay.getAttribute('data-bay'));
+      const box=e.target.closest('[data-id]');
+      sel.value = box && box.getAttribute('data-id')!==lay.value.root.id ? box.getAttribute('data-id') : null;
+    }
+    function onDbl(e){
+      const box=e.target.closest('[data-id]');
+      const id=box && box.getAttribute('data-id');
+      if (id && id!==lay.value.root.id && lay.value.nodes[id]) open(nodeItem(lay.value.nodes[id]));
+    }
+
+    return { store, actions, view, path, open, up, setMode, fillClr, lvColor, lvQty, lvTag, lvHasStock, typeClr, typeName, shortWh, fmtUoms, qtyByUom,
+      TYPE_CLR, svgEl, vb, planSvg, selItem, fit, onWheel, onDown, onMove, onUp, onClick, onDbl };
   },
   template: `
     <div id="wt-view2d" :style="{display:store.curView==='2d'?'block':'none'}">
-      <div class="wt-2d-wrap">
-        <template v-if="sections.length">
-          <div v-for="sec in sections" :key="sec.key" class="wt-2d-sec">
-            <div class="wt-2d-sec-hdr">
-              <div class="wt-2d-sec-name">{{sec.key}}</div>
-              <div :class="['wt-2d-sec-cnt', sec.cntCls]">{{sec.occ}}/{{sec.tiles.length}}</div>
-            </div>
-            <div class="wt-2d-sec-cap">
-              <div class="wt-2d-sec-cap-fill" :style="{width:sec.avgFp+'%',background:sec.barClr}"></div>
-            </div>
-            <div class="wt-2d-slots" :style="{'grid-template-columns':'repeat('+sec.cols+',1fr)'}">
-              <div v-for="(sl,ti) in sec.tiles" :key="sl.wh"
-                :class="['wt-2d-tile', tileCls(sl)]"
-                :style="{'animation-delay':ti*30+'ms'}"
-                :title="zoneLabel(sl)+sl.wh+(hasStock(sl)?'\\n'+fmtUoms(qtyByUom(sl.levels),20):'\\nEmpty')"
-                @click="actions.open2DModal(sl.wh)">
-                <div class="wt-2d-tile-name">{{sl.shortName}}</div>
-                <div class="wt-2d-tile-qty">{{hasStock(sl)?tileQty(sl):'—'}}</div>
-                <div v-if="sl.levels && sl.levels.length>1" class="wt-2d-levels">
-                  <div v-for="lv in [...sl.levels].reverse()" :key="lv.wh"
-                    class="wt-2d-lv-row"
-                    @click.stop="actions.open2DModalLevel(sl.wh, lv.wh)">
-                    <div class="wt-2d-lv-dot" :style="{background:lvColor(lv)}"></div>
-                    <div class="wt-2d-lv-name">{{lv.label.split('/').pop()}}</div>
-                    <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}"
-                      :title="(lv.serials||[]).map(x=>x.sn).join(', ')">
-                      {{lvHasStock(lv)?(lvTag(lv)||lvQty(lv)):'—'}}
-                    </div>
-                    <span v-for="b in (lv.badges||[])" :key="b.label" :class="['wt-badge', b.color]">{{b.label}}</span>
+      <div v-if="!view" class="wt-g-empty">Pick a warehouse in the tree.</div>
+      <div v-else class="wt-g-wrap">
+        <div class="wt-g-head">
+          <div class="wt-g-crumbs">
+            <template v-for="id in path" :key="id"><a @click="up(id)">{{shortWh(id)}}</a><span>›</span></template>
+            <b>{{view.root.label}}</b>
+            <span class="wt-g-chip" :style="{'--c':typeClr(view.root.type)}">{{typeName(view.root.type, view.root.ws, view.root.isGroup)}}</span>
+            <span class="wt-g-meta" v-if="view.root.st.bays">{{view.root.st.used}}/{{view.root.st.bays}} {{l('Slot', true, view.root.ws)}} with stock</span>
+          </div>
+          <div class="wt-g-modes">
+            <button :class="{on:store.v2Mode!=='plan'}" @click="setMode('cards')">▦ Cards</button>
+            <button :class="{on:store.v2Mode==='plan'}" @click="setMode('plan')">⌗ Plan</button>
+          </div>
+        </div>
+        <div class="wt-g-legend">
+          <span v-for="(c,t) in TYPE_CLR" :key="t"><i :style="{background:c}"></i>{{L(t, false, view.root.ws)}}</span>
+        </div>
+
+        <div v-if="store.v2Mode!=='plan'" class="wt-g-grid">
+          <div v-if="!view.cards.length" class="wt-g-empty">Nothing inside {{view.root.label}}.</div>
+          <template v-for="(c,i) in view.cards" :key="c.id">
+            <div v-if="c.zone && c.zone!==(view.cards[i-1]||{}).zone" class="wt-g-zone">{{c.zone}}</div>
+            <div :class="['wt-g-card', c.kind==='bay'?'bay '+c.cls:'', c.st.hit?'':'dim']" :style="{'--c':typeClr(c.type)}">
+              <div class="wt-g-card-hd" @click="open(c)" :title="c.kind==='bay'?'Open the stock':'Open '+c.label">
+                <span class="wt-g-chip" :style="{'--c':typeClr(c.type)}">{{typeName(c.type, c.ws, c.isGroup)}}</span>
+                <span class="wt-g-name">{{c.label}}</span>
+                <span class="wt-g-go">{{c.kind==='bay'?'◫':'›'}}</span>
+              </div>
+              <div class="wt-g-stats">
+                <span v-if="c.kind!=='bay'">{{c.kids.length}} inside</span>
+                <span v-if="c.st.bays && c.kind!=='bay'">{{c.st.used}}/{{c.st.bays}} {{l('Slot', true, c.ws)}} with stock</span>
+                <span v-if="c.kind==='bay'">{{c.st.used?fmtUoms(qtyByUom(c.slot.levels),2):'Empty'}}</span>
+                <span v-if="c.st.fill!=null">{{c.st.fill}}% full</span>
+              </div>
+              <div class="wt-g-bar"><i :style="{width:(c.st.fill||0)+'%', background:fillClr(c.st)}"></i></div>
+              <div v-if="c.kind==='bay'" class="wt-2d-levels">
+                <div v-for="lv in [...c.slot.levels].reverse()" :key="lv.wh" class="wt-2d-lv-row" @click.stop="actions.open2DModalLevel(c.id, lv.wh)">
+                  <div class="wt-2d-lv-dot" :style="{background:lvColor(lv)}"></div>
+                  <span class="wt-g-chip sm" :style="{'--c':typeClr('Level')}">{{L('Level', false, c.ws)}}</span>
+                  <div class="wt-2d-lv-name">{{lv.label.split('/').pop()}}</div>
+                  <div class="wt-2d-lv-qty" :style="{color:lvHasStock(lv)?lvColor(lv):'var(--wt-text3)'}" :title="(lv.serials||[]).map(x=>x.sn).join(', ')">
+                    {{lvHasStock(lv)?(lvTag(lv)||lvQty(lv)):'—'}}
                   </div>
+                  <span v-for="b in (lv.badges||[])" :key="b.label" :class="['wt-badge', b.color]">{{b.label}}</span>
                 </div>
-                <div class="wt-2d-tile-bar" :style="{background:hasStock(sl)?FCH(slotFill(sl)):'transparent'}"></div>
+              </div>
+              <div v-else-if="c.kids.length" class="wt-g-tiles">
+                <div v-for="k in c.kids" :key="k.id" :class="['wt-g-tile', k.kind==='bay'?'bay '+k.cls:'', k.st.hit?'':'dim']"
+                  :style="{'--c':typeClr(k.type)}" @click="open(k)"
+                  :title="typeName(k.type,k.ws,k.isGroup)+' · '+k.label+(k.st.bays?' · '+k.st.used+'/'+k.st.bays+' with stock':'')">
+                  <span class="wt-g-tile-name">{{k.label}}</span>
+                  <span class="wt-g-tile-meta">{{k.kind==='bay' ? (k.st.used?fmtUoms(qtyByUom(k.slot.levels),1):'—') : typeName(k.type,k.ws,k.isGroup)+(k.st.bays?' · '+k.st.used+'/'+k.st.bays:'')}}</span>
+                </div>
               </div>
             </div>
+          </template>
+        </div>
+
+        <div v-else class="wt-g-plan">
+          <svg ref="svgEl" :viewBox="vb.x+' '+vb.y+' '+vb.w+' '+vb.h" preserveAspectRatio="xMidYMid meet"
+            @wheel="onWheel" @pointerdown="onDown" @pointermove="onMove" @pointerup="onUp" @pointercancel="onUp" @pointerleave="onUp"
+            @click="onClick" @dblclick="onDbl" v-html="planSvg"></svg>
+          <button class="wt-g-fit" @click="fit()" title="Fit the whole plan">⤢</button>
+          <div v-if="selItem" class="wt-g-sel">
+            <span class="wt-g-chip" :style="{'--c':typeClr(selItem.type)}">{{typeName(selItem.type, selItem.ws, selItem.isGroup)}}</span>
+            <b>{{selItem.label}}</b>
+            <span v-if="selItem.st.bays">{{selItem.st.used}}/{{selItem.st.bays}} {{l('Slot', true, selItem.ws)}} with stock</span>
+            <button @click="open(selItem)">Open ›</button>
           </div>
-        </template>
-        <div v-else style="padding:32px;color:var(--wt-text3);font-size:13px">
-          <span v-if="store.searchQuery">No warehouses found with stock for "<b style="color:var(--wt-text2)">{{store.searchQuery}}</b>"</span>
-          <span v-else>No {{l('Slot', 1)}} to display</span>
+          <div class="wt-g-hint">Drag to move · wheel or pinch to zoom · tap to select · double-click to open</div>
         </div>
       </div>
     </div>
